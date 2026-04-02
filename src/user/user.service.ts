@@ -1,0 +1,78 @@
+import {
+  ForbiddenException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
+import { randomUUID } from 'crypto';
+import { ArticleService } from '../article/article.service';
+import { CommentService } from '../comment/comment.service';
+import { CreateUserDto } from './dto/create-user.dto';
+import { UpdatePasswordDto } from './dto/update-password.dto';
+import { UserRole } from './enums/user-role.enum';
+import { PublicUser, User } from './interfaces/user';
+
+@Injectable()
+export class UserService {
+  private users: User[] = [];
+
+  constructor(
+    private readonly articlesService: ArticleService,
+    private readonly commentsService: CommentService,
+  ) {}
+
+  private toPublic(user: User): PublicUser {
+    const { password: _password, ...rest } = user;
+    return rest;
+  }
+
+  findAll(): PublicUser[] {
+    return this.users.map((u) => this.toPublic(u));
+  }
+
+  findOne(id: string): PublicUser {
+    const user = this.users.find((u) => u.id === id);
+    if (!user) {
+      throw new NotFoundException();
+    }
+    return this.toPublic(user);
+  }
+
+  create(userDto: CreateUserDto): PublicUser {
+    const now = Date.now();
+    const user: User = {
+      id: randomUUID(),
+      login: userDto.login,
+      password: userDto.password,
+      role: userDto.role ?? UserRole.VIEWER,
+      createdAt: now,
+      updatedAt: now,
+      version: 1,
+    };
+    this.users.push(user);
+    return this.toPublic(user);
+  }
+
+  updatePassword(id: string, dto: UpdatePasswordDto): PublicUser {
+    const user = this.users.find((u) => u.id === id);
+    if (!user) {
+      throw new NotFoundException();
+    }
+    if (user.password !== dto.oldPassword) {
+      throw new ForbiddenException();
+    }
+    user.password = dto.newPassword;
+    user.updatedAt = Date.now();
+    user.version += 1;
+    return this.toPublic(user);
+  }
+
+  remove(id: string): void {
+    const idx = this.users.findIndex((u) => u.id === id);
+    if (idx === -1) {
+      throw new NotFoundException();
+    }
+    this.articlesService.nullifyAuthor(id);
+    this.commentsService.removeByAuthor(id);
+    this.users.splice(idx, 1);
+  }
+}
