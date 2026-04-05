@@ -1,14 +1,6 @@
-# Home Library (Knowledge Hub API)
+# Knowledge Hub API
 
 NestJS REST API for users, categories, articles, and comments. Data is stored **in memory** (reset on server restart). OpenAPI (Swagger) UI is available at `/doc`.
-
----
-
-## Requirements
-
-- **Node.js** `>= 22.14.0` (see `package.json` → `engines`)
-- **npm** (comes with Node.js)
-- **Git** (to clone the repository)
 
 ---
 
@@ -33,21 +25,7 @@ NestJS REST API for users, categories, articles, and comments. Data is stored **
    cp .env.example .env
    ```
 
-4. Edit `.env` if needed (see [Configuration](#configuration)).
-
----
-
-## Configuration
-
-Environment variables are read from `.env` (optional; you can also export variables in the shell).
-
-| Variable | Required | Description |
-|----------|----------|-------------|
-| `PORT` | No | HTTP port. Default: **4000** if unset. |
-| `API_KEY` | No | If set, most routes require header `x-api-key: <same value>`. Omitted or unset → no API key check (good for local dev and tests). |
-| `CRYPT_SALT`, `JWT_SECRET_KEY`, `JWT_SECRET_REFRESH_KEY`, `TOKEN_EXPIRE_TIME`, `TOKEN_REFRESH_EXPIRE_TIME` | No | Reserved for JWT/auth flows; see `.env.example`. |
-
-**Swagger and health:** `GET /health` and paths under `/doc` are **not** protected by `API_KEY` when it is enabled.
+4. Edit `.env` if needed
 
 ---
 
@@ -56,15 +34,13 @@ Environment variables are read from `.env` (optional; you can also export variab
 Build the project (required for production start):
 
 ```bash
-npm run build
+npm run start
 ```
 
 | Command | When to use |
 |---------|-------------|
 | `npm run start:dev` | **Recommended for development** — watch mode, recompiles on save. |
 | `npm start` | Single run (`nest start`), no file watching. |
-| `npm run start:prod` | Production: runs compiled `dist/main.js` (run `npm run build` first). |
-| `npm run start:debug` | Development with Node inspector. |
 
 After startup, the console shows the listening URL, e.g. `http://localhost:4000`.
 
@@ -82,12 +58,6 @@ Send JSON bodies with header:
 Content-Type: application/json
 ```
 
-If `API_KEY` is set in `.env`, add:
-
-```http
-x-api-key: <your-api-key>
-```
-
 Avoid trailing spaces in URLs (e.g. use `/user`, not `/user%20`).
 
 ### OpenAPI (Swagger)
@@ -100,32 +70,24 @@ Avoid trailing spaces in URLs (e.g. use `/user`, not `/user%20`).
 
 - **`GET /health`** — returns a small JSON payload (e.g. `{ "status": "ok" }`) for liveness checks.
 
-### API overview (resources)
+### List endpoints: pagination and sorting
 
-| Resource | Base path | Notes |
-|----------|-----------|--------|
-| Users | `/user` | List/create users; `GET/PUT/DELETE /user/:id` with UUID. Password never returned in JSON. |
-| Categories | `/category` | Full CRUD; `:id` is UUID. |
-| Articles | `/article` | Full CRUD; `:id` is UUID. Default `status` on create: `draft`; optional `authorId`, `categoryId`, `tags`. |
-| Comments | `/comment` | **`GET /comment?articleId=<uuid>`** — `articleId` is **required** (query). `POST /comment`, `DELETE /comment/:id`. |
+For **`GET /user`**, **`GET /category`**, **`GET /article`**, and **`GET /comment`** (with required `articleId` query):
 
-**Identifiers:** path parameters `:id` must be valid UUIDs where `ParseUUIDPipe` is used; otherwise the API responds with **400**.
+| Query | Description |
+|-------|-------------|
+| `page` | Page number (integer ≥ 1). |
+| `limit` | Page size (integer 1–100). |
+| `sortBy` | Field name allowed for that resource (e.g. `createdAt`, `login`, `title`). |
+| `order` | `asc` or `desc` (default `asc` when sorting). |
 
-**Cascading deletes (in-memory consistency):**
+If **`page` or `limit` is present**, the response is:
 
-- Deleting a **user** sets `authorId` to `null` on their articles and removes comments authored by that user.
-- Deleting a **category** sets `categoryId` to `null` on articles in that category.
-- Deleting an **article** removes all comments for that article.
-
-### Request logging
-
-HTTP requests are logged (method, URL, status code, duration) via Nest **middleware** (`LoggingMiddleware`).
-
----
+```json
+{ "total": 42, "page": 1, "limit": 10, "data": [ ... ] }
+```
 
 ## Testing
-
-End-to-end tests use **supertest** against a running server on `PORT` (default **4000**).
 
 1. Start the API in one terminal:
 
@@ -138,21 +100,6 @@ End-to-end tests use **supertest** against a running server on `PORT` (default *
    ```bash
    npm run test
    ```
-
-Run a single suite (example):
-
-```bash
-npm run test -- users.e2e.spec.ts
-```
-
-With auth (`TEST_MODE=auth`; see template):
-
-```bash
-npm run test:auth
-npm run test:refresh   # only refresh-token flow
-npm run test:rbac      # only test/rbac/*.e2e.spec.ts
-```
-
 ---
 
 ## Project structure (high level)
@@ -160,7 +107,7 @@ npm run test:rbac      # only test/rbac/*.e2e.spec.ts
 - `src/main.ts` — bootstrap, global `ValidationPipe`, Swagger at `/doc`, `PORT`.
 - `src/app.module.ts` — root module, logging middleware, global `ApiKeyGuard` (optional).
 - `src/user/`, `src/category/`, `src/article/`, `src/comment/` — feature modules (controller / service / DTOs).
-- `src/common/` — shared middleware and guards.
+- `src/common/` — shared middleware, guards, list-query DTOs, `applyListQuery` helper.
 - `test/` — Jest e2e specs (`rootDir` in `jest.config.json`).
 
 ---

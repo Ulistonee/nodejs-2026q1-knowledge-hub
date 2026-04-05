@@ -1,9 +1,14 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { randomUUID } from 'crypto';
 import { ArticleService } from '../article/article.service';
+import { ListQueryDto } from '../common/dto/list-query.dto';
+import { PaginatedResult } from '../common/interfaces/paginated-result.interface';
+import { applyListQuery } from '../common/utils/apply-list-query';
 import { CreateCategoryDto } from './dto/create-category.dto';
 import { UpdateCategoryDto } from './dto/update-category.dto';
 import { Category } from './interfaces/category';
+
+const CATEGORY_SORT_FIELDS: (keyof Category)[] = ['id', 'name', 'description'];
 
 @Injectable()
 export class CategoryService {
@@ -11,8 +16,8 @@ export class CategoryService {
 
   constructor(private readonly articlesService: ArticleService) {}
 
-  findAll(): Category[] {
-    return this.categories;
+  findAll(query: ListQueryDto): Category[] | PaginatedResult<Category> {
+    return applyListQuery(this.categories, query, CATEGORY_SORT_FIELDS);
   }
 
   findOne(id: string): Category {

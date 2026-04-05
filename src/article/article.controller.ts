@@ -11,6 +11,7 @@ import {
   Put,
   Query,
 } from '@nestjs/common';
+import { ArticleListQueryDto } from '../common/dto/article-list-query.dto';
 import { ArticleService } from './article.service';
 import { CreateArticleDto } from './dto/create-article.dto';
 import { UpdateArticleDto } from './dto/update-article.dto';
@@ -20,13 +21,8 @@ export class ArticleController {
   constructor(private readonly articleService: ArticleService) {}
 
   @Get()
-  findAll(
-    @Query('status') status?: string,
-    @Query('categoryId', new ParseUUIDPipe({ optional: true }))
-    categoryId?: string,
-    @Query('tag') tag?: string,
-  ) {
-    return this.articleService.findAll({ status, categoryId, tag });
+  findAll(@Query() query: ArticleListQueryDto) {
+    return this.articleService.findAll(query);
   }
 
   @Get(':id')

@@ -6,10 +6,22 @@ import {
 import { randomUUID } from 'crypto';
 import { ArticleService } from '../article/article.service';
 import { CommentService } from '../comment/comment.service';
+import { ListQueryDto } from '../common/dto/list-query.dto';
+import { PaginatedResult } from '../common/interfaces/paginated-result.interface';
+import { applyListQuery } from '../common/utils/apply-list-query';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdatePasswordDto } from './dto/update-password.dto';
 import { UserRole } from './enums/user-role.enum';
 import { PublicUser, User } from './interfaces/user';
+
+const USER_SORT_FIELDS: (keyof PublicUser)[] = [
+  'id',
+  'login',
+  'role',
+  'createdAt',
+  'updatedAt',
+  'version',
+];
 
 @Injectable()
 export class UserService {
@@ -26,8 +38,9 @@ export class UserService {
     return rest;
   }
 
-  findAll(): PublicUser[] {
-    return this.users.map((u) => this.toPublic(u));
+  findAll(query: ListQueryDto): PublicUser[] | PaginatedResult<PublicUser> {
+    const items = this.users.map((u) => this.toPublic(u));
+    return applyListQuery(items, query, USER_SORT_FIELDS);
   }
 
   findOne(id: string): PublicUser {

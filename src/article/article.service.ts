@@ -6,10 +6,24 @@ import {
 } from '@nestjs/common';
 import { randomUUID } from 'crypto';
 import { CommentService } from '../comment/comment.service';
+import { ArticleListQueryDto } from '../common/dto/article-list-query.dto';
+import { PaginatedResult } from '../common/interfaces/paginated-result.interface';
+import { applyListQuery } from '../common/utils/apply-list-query';
 import { CreateArticleDto } from './dto/create-article.dto';
 import { UpdateArticleDto } from './dto/update-article.dto';
 import { ArticleStatus } from './enums/article-status.enum';
 import { Article } from './interfaces/article';
+
+const ARTICLE_SORT_FIELDS: (keyof Article)[] = [
+  'id',
+  'title',
+  'content',
+  'status',
+  'authorId',
+  'categoryId',
+  'createdAt',
+  'updatedAt',
+];
 
 @Injectable()
 export class ArticleService {
@@ -36,22 +50,18 @@ export class ArticleService {
     }
   }
 
-  findAll(filters?: {
-    status?: string;
-    categoryId?: string;
-    tag?: string;
-  }): Article[] {
+  findAll(dto: ArticleListQueryDto): Article[] | PaginatedResult<Article> {
     let list = this.articles;
-    if (filters?.status) {
-      list = list.filter((a) => a.status === filters.status);
+    if (dto.status) {
+      list = list.filter((a) => a.status === dto.status);
     }
-    if (filters?.categoryId) {
-      list = list.filter((a) => a.categoryId === filters.categoryId);
+    if (dto.categoryId) {
+      list = list.filter((a) => a.categoryId === dto.categoryId);
     }
-    if (filters?.tag) {
-      list = list.filter((a) => a.tags.includes(filters.tag));
+    if (dto.tag) {
+      list = list.filter((a) => a.tags.includes(dto.tag));
     }
-    return list;
+    return applyListQuery(list, dto, ARTICLE_SORT_FIELDS);
   }
 
   hasArticle(id: string): boolean {

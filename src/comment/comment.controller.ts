@@ -10,6 +10,7 @@ import {
   Post,
   Query,
 } from '@nestjs/common';
+import { CommentListQueryDto } from '../common/dto/comment-list-query.dto';
 import { CommentService } from './comment.service';
 import { CreateCommentDto } from './dto/create-comment.dto';
 
@@ -23,8 +24,8 @@ export class CommentController {
   }
 
   @Get()
-  findByArticleId(@Query('articleId', ParseUUIDPipe) articleId: string) {
-    return this.commentService.findByArticleId(articleId);
+  findByArticleId(@Query() query: CommentListQueryDto) {
+    return this.commentService.findByArticleId(query.articleId, query);
   }
 
   @Post()

@@ -9,7 +9,9 @@ import {
   ParseUUIDPipe,
   Post,
   Put,
+  Query,
 } from '@nestjs/common';
+import { ListQueryDto } from '../common/dto/list-query.dto';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdatePasswordDto } from './dto/update-password.dto';
 import { UserService } from './user.service';
@@ -19,8 +21,8 @@ export class UserController {
   constructor(private readonly userService: UserService) {}
 
   @Get()
-  findAll() {
-    return this.userService.findAll();
+  findAll(@Query() query: ListQueryDto) {
+    return this.userService.findAll(query);
   }
 
   @Get(':id')

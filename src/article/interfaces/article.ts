@@ -1,8 +1,10 @@
+import { ArticleStatus } from '../enums/article-status.enum';
+
 export interface Article {
   id: string;
   title: string;
   content: string;
-  status: 'draft' | 'published' | 'archived';
+  status: ArticleStatus;
   authorId: string | null;
   categoryId: string | null;
   tags: string[];

@@ -9,7 +9,9 @@ import {
   ParseUUIDPipe,
   Post,
   Put,
+  Query,
 } from '@nestjs/common';
+import { ListQueryDto } from '../common/dto/list-query.dto';
 import { CategoryService } from './category.service';
 import { CreateCategoryDto } from './dto/create-category.dto';
 import { UpdateCategoryDto } from './dto/update-category.dto';
@@ -19,8 +21,8 @@ export class CategoryController {
   constructor(private readonly categoryService: CategoryService) {}
 
   @Get()
-  findAll() {
-    return this.categoryService.findAll();
+  findAll(@Query() query: ListQueryDto) {
+    return this.categoryService.findAll(query);
   }
 
   @Get(':id')
