@@ -1,72 +1,113 @@
-# Home Library Service
+# Knowledge Hub API
 
-## Prerequisites
+NestJS REST API for users, categories, articles, and comments. Data is stored **in memory** (reset on server restart). OpenAPI (Swagger) UI is available at `/doc`.
 
-- Git - [Download & Install Git](https://git-scm.com/downloads).
-- Node.js - [Download & Install Node.js](https://nodejs.org/en/download/) and the npm package manager.
+---
 
-## Downloading
+## Installation
 
+1. Clone the repository:
+
+   ```bash
+   git clone <repository-url>
+   cd nodejs-2026q1-knowledge-hub
+   ```
+
+2. Install dependencies:
+
+   ```bash
+   npm install
+   ```
+
+3. Create a local environment file from the example:
+
+   ```bash
+   cp .env.example .env
+   ```
+
+4. Edit `.env` if needed
+
+---
+
+## Running the application
+
+Build the project (required for production start):
+
+```bash
+npm run start
 ```
-git clone {repository URL}
+
+| Command | When to use |
+|---------|-------------|
+| `npm run start:dev` | **Recommended for development** — watch mode, recompiles on save. |
+| `npm start` | Single run (`nest start`), no file watching. |
+
+After startup, the console shows the listening URL, e.g. `http://localhost:4000`.
+
+---
+
+## Using the application
+
+### Base URL
+
+All API routes are relative to the server origin, e.g. `http://localhost:4000`.
+
+Send JSON bodies with header:
+
+```http
+Content-Type: application/json
 ```
 
-## Installing NPM modules
+Avoid trailing spaces in URLs (e.g. use `/user`, not `/user%20`).
 
-```
-npm install
-```
+### OpenAPI (Swagger)
 
-## Running application
+- Open **`http://localhost:4000/doc`** in a browser.
+- Explore schemas and try requests from the UI.
+- DTO shapes are enriched via the Nest Swagger compiler plugin (`nest-cli.json`).
 
-```
-npm start
-```
+### Health check
 
-After starting the app on port (4000 as default) you can open
-in your browser OpenAPI documentation by typing http://localhost:4000/doc/.
-For more information about OpenAPI/Swagger please visit https://swagger.io/.
+- **`GET /health`** — returns a small JSON payload (e.g. `{ "status": "ok" }`) for liveness checks.
+
+### List endpoints: pagination and sorting
+
+For **`GET /user`**, **`GET /category`**, **`GET /article`**, and **`GET /comment`** (with required `articleId` query):
+
+| Query | Description |
+|-------|-------------|
+| `page` | Page number (integer ≥ 1). |
+| `limit` | Page size (integer 1–100). |
+| `sortBy` | Field name allowed for that resource (e.g. `createdAt`, `login`, `title`). |
+| `order` | `asc` or `desc` (default `asc` when sorting). |
+
+If **`page` or `limit` is present**, the response is:
+
+```json
+{ "total": 42, "page": 1, "limit": 10, "data": [ ... ] }
+```
 
 ## Testing
 
-After application running open new terminal and enter:
+1. Start the API in one terminal:
 
-To run all tests without authorization
+   ```bash
+   npm run start:dev
+   ```
 
-```
-npm run test
-```
+2. In another terminal, run tests from the project root:
 
-To run only one of all test suites
+   ```bash
+   npm run test
+   ```
+---
 
-```
-npm run test -- <path to suite>
-```
+## Project structure (high level)
 
-To run all test with authorization
+- `src/main.ts` — bootstrap, global `ValidationPipe`, Swagger at `/doc`, `PORT`.
+- `src/app.module.ts` — root module, logging middleware, global `ApiKeyGuard` (optional).
+- `src/user/`, `src/category/`, `src/article/`, `src/comment/` — feature modules (controller / service / DTOs).
+- `src/common/` — shared middleware, guards, list-query DTOs, `applyListQuery` helper.
+- `test/` — Jest e2e specs (`rootDir` in `jest.config.json`).
 
-```
-npm run test:auth
-```
-
-To run only specific test suite with authorization
-
-```
-npm run test:auth -- <path to suite>
-```
-
-### Auto-fix and format
-
-```
-npm run lint
-```
-
-```
-npm run format
-```
-
-### Debugging in VSCode
-
-Press <kbd>F5</kbd> to debug.
-
-For more information, visit: https://code.visualstudio.com/docs/editor/debugging
+---
