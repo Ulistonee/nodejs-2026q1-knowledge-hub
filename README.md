@@ -145,6 +145,14 @@ Run a single suite (example):
 npm run test -- users.e2e.spec.ts
 ```
 
+With auth (`TEST_MODE=auth`; see template):
+
+```bash
+npm run test:auth
+npm run test:refresh   # only refresh-token flow
+npm run test:rbac      # only test/rbac/*.e2e.spec.ts
+```
+
 ---
 
 ## Project structure (high level)

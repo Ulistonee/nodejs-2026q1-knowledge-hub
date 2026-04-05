@@ -1,4 +1,9 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import {
+  forwardRef,
+  Inject,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { randomUUID } from 'crypto';
 import { CommentService } from '../comment/comment.service';
 import { CreateArticleDto } from './dto/create-article.dto';
@@ -10,7 +15,10 @@ import { Article } from './interfaces/article';
 export class ArticleService {
   private readonly articles: Article[] = [];
 
-  constructor(private readonly commentsService: CommentService) {}
+  constructor(
+    @Inject(forwardRef(() => CommentService))
+    private readonly commentsService: CommentService,
+  ) {}
 
   nullifyAuthor(authorId: string): void {
     for (const article of this.articles) {
@@ -28,12 +36,34 @@ export class ArticleService {
     }
   }
 
-  findAll(): Article[] {
-    return this.articles;
+  findAll(filters?: {
+    status?: string;
+    categoryId?: string;
+    tag?: string;
+  }): Article[] {
+    let list = this.articles;
+    if (filters?.status) {
+      list = list.filter((a) => a.status === filters.status);
+    }
+    if (filters?.categoryId) {
+      list = list.filter((a) => a.categoryId === filters.categoryId);
+    }
+    if (filters?.tag) {
+      list = list.filter((a) => a.tags.includes(filters.tag));
+    }
+    return list;
+  }
+
+  hasArticle(id: string): boolean {
+    return this.articles.some((a) => a.id === id);
   }
 
   findOne(id: string): Article {
-    return this.articles.find((article) => article.id === id);
+    const article = this.articles.find((a) => a.id === id);
+    if (!article) {
+      throw new NotFoundException();
+    }
+    return article;
   }
 
   create(dto: CreateArticleDto): Article {

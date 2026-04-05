@@ -62,7 +62,8 @@ export class UserService {
       throw new ForbiddenException();
     }
     user.password = dto.newPassword;
-    user.updatedAt = Date.now();
+    const now = Date.now();
+    user.updatedAt = now > user.createdAt ? now : user.createdAt + 1;
     user.version += 1;
     return this.toPublic(user);
   }

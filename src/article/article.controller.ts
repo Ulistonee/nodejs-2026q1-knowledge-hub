@@ -1,6 +1,7 @@
 import {
   Body,
   Controller,
+  Delete,
   Get,
   HttpCode,
   HttpStatus,
@@ -8,7 +9,7 @@ import {
   ParseUUIDPipe,
   Post,
   Put,
-  Delete,
+  Query,
 } from '@nestjs/common';
 import { ArticleService } from './article.service';
 import { CreateArticleDto } from './dto/create-article.dto';
@@ -19,9 +20,15 @@ export class ArticleController {
   constructor(private readonly articleService: ArticleService) {}
 
   @Get()
-  findAll() {
-    return this.articleService.findAll();
+  findAll(
+    @Query('status') status?: string,
+    @Query('categoryId', new ParseUUIDPipe({ optional: true }))
+    categoryId?: string,
+    @Query('tag') tag?: string,
+  ) {
+    return this.articleService.findAll({ status, categoryId, tag });
   }
+
   @Get(':id')
   findOne(@Param('id', ParseUUIDPipe) id: string) {
     return this.articleService.findOne(id);
