@@ -1,14 +1,14 @@
 import {
-    Body,
-    Controller,
-    Get,
-    HttpCode,
-    HttpStatus,
-    Param,
-    ParseUUIDPipe,
-    Post,
-    Put,
-    Delete,
+  Body,
+  Controller,
+  Get,
+  HttpCode,
+  HttpStatus,
+  Param,
+  ParseUUIDPipe,
+  Post,
+  Put,
+  Delete,
 } from '@nestjs/common';
 import { ArticleService } from './article.service';
 import { CreateArticleDto } from './dto/create-article.dto';
@@ -29,11 +29,14 @@ export class ArticleController {
   @Post()
   @HttpCode(HttpStatus.CREATED)
   create(@Body() dto: CreateArticleDto) {
-    return this.articleService.create(dto); 
+    return this.articleService.create(dto);
   }
-  
+
   @Put(':id')
-  update(@Param('id', ParseUUIDPipe) id: string, @Body() dto: UpdateArticleDto) {
+  update(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() dto: UpdateArticleDto,
+  ) {
     return this.articleService.update(id, dto);
   }
   @Delete(':id')
