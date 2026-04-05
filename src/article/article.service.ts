@@ -1,5 +1,6 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { randomUUID } from 'crypto';
+import { CommentService } from '../comment/comment.service';
 import { CreateArticleDto } from './dto/create-article.dto';
 import { UpdateArticleDto } from './dto/update-article.dto';
 import { ArticleStatus } from './enums/article-status.enum';
@@ -9,10 +10,20 @@ import { Article } from './interfaces/article';
 export class ArticleService {
   private readonly articles: Article[] = [];
 
+  constructor(private readonly commentsService: CommentService) {}
+
   nullifyAuthor(authorId: string): void {
     for (const article of this.articles) {
       if (article.authorId === authorId) {
         article.authorId = null;
+      }
+    }
+  }
+
+  nullifyCategory(categoryId: string): void {
+    for (const article of this.articles) {
+      if (article.categoryId === categoryId) {
+        article.categoryId = null;
       }
     }
   }
@@ -43,10 +54,7 @@ export class ArticleService {
   }
 
   update(id: string, dto: UpdateArticleDto): Article {
-    console.log('update id:', id);
-    console.log('update dto:', JSON.stringify(dto));
     const article = this.articles.find((a) => a.id === id);
-    console.log('found article:', article ? article.id : 'NOT FOUND');
     if (!article) {
       throw new NotFoundException();
     }
@@ -69,7 +77,6 @@ export class ArticleService {
       article.tags = dto.tags;
     }
     article.updatedAt = Date.now();
-    console.log('after update:', JSON.stringify(article));
 
     return article;
   }
@@ -79,6 +86,7 @@ export class ArticleService {
     if (idx === -1) {
       throw new NotFoundException();
     }
+    this.commentsService.removeByArticle(id);
     this.articles.splice(idx, 1);
   }
 }

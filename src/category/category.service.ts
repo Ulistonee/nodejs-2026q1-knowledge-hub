@@ -1,5 +1,6 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { randomUUID } from 'crypto';
+import { ArticleService } from '../article/article.service';
 import { CreateCategoryDto } from './dto/create-category.dto';
 import { UpdateCategoryDto } from './dto/update-category.dto';
 import { Category } from './interfaces/category';
@@ -7,6 +8,8 @@ import { Category } from './interfaces/category';
 @Injectable()
 export class CategoryService {
   private categories: Category[] = [];
+
+  constructor(private readonly articlesService: ArticleService) {}
 
   findAll(): Category[] {
     return this.categories;
@@ -49,6 +52,7 @@ export class CategoryService {
     if (idx === -1) {
       throw new NotFoundException();
     }
+    this.articlesService.nullifyCategory(id);
     this.categories.splice(idx, 1);
   }
 }
