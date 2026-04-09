@@ -87,6 +87,41 @@ If **`page` or `limit` is present**, the response is:
 { "total": 42, "page": 1, "limit": 10, "data": [ ... ] }
 ```
 
+## Docker
+
+### Docker Hub
+
+The image is available at: **[hub.docker.com/r/<your-dockerhub-login>/knowledge-hub](https://hub.docker.com/r/<your-dockerhub-login>/knowledge-hub)**
+
+Pull and run without cloning the repository:
+
+```bash
+docker pull <your-dockerhub-login>/knowledge-hub
+docker run -p 4000:4000 -e PORT=4000 <your-dockerhub-login>/knowledge-hub
+```
+
+### Build and run locally with Docker Compose
+
+```bash
+# Copy environment file
+cp .env.example .env
+
+# Start all services (app + PostgreSQL)
+docker compose up --build
+
+# Start with Adminer UI for DB inspection (http://localhost:8080)
+docker compose --profile debug up --build
+```
+
+### Build image manually
+
+```bash
+docker build -t knowledge-hub .
+docker run -p 4000:4000 --env-file .env knowledge-hub
+```
+
+---
+
 ## Testing
 
 1. Start the API in one terminal:
