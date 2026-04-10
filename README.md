@@ -9,7 +9,7 @@ NestJS REST API for users, categories, articles, and comments. Data is stored **
 1. Clone the repository:
 
    ```bash
-   git clone <repository-url>
+   git clone https://github.com/Ulistonee/nodejs-2026q1-knowledge-hub
    cd nodejs-2026q1-knowledge-hub
    ```
 
@@ -119,6 +119,24 @@ docker compose --profile debug up --build
 docker build -t knowledge-hub .
 docker run -p 4000:4000 --env-file .env knowledge-hub
 ```
+
+### Docker Scout CVE report (brief)
+
+Build an image, then scan (image name may differ; with Compose use `docker images` and pick the `*-app` tag):
+
+```bash
+docker build -t knowledge-hub-app .
+docker scout cves knowledge-hub-app
+```
+
+Example snapshot from `docker scout cves` (numbers change when you rebuild, update the base image, or when Scout refreshes its advisories):
+
+| | |
+|---|---|
+| Image | `nodejs-2026q1-knowledge-hub-app:latest` |
+| Platform | `linux/arm64` |
+| Packages indexed | ~358 |
+| Severities | 0 Critical, 7 High, 4 Medium, 1 Low, 5 Unspecified (17 findings in 7 packages) |
 
 ---
 
