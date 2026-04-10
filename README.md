@@ -91,13 +91,13 @@ If **`page` or `limit` is present**, the response is:
 
 ### Docker Hub
 
-The image is available at: **[hub.docker.com/r/<your-dockerhub-login>/knowledge-hub](https://hub.docker.com/r/<your-dockerhub-login>/knowledge-hub)**
+Pre-built container image for this API on Docker Hub: **[aizhanbexatova/knowledge-hub](https://hub.docker.com/r/aizhanbexatova/knowledge-hub)** — pull `latest` or another tag from the **Tags** tab on that page.
 
 Pull and run without cloning the repository:
 
 ```bash
-docker pull <your-dockerhub-login>/knowledge-hub
-docker run -p 4000:4000 -e PORT=4000 <your-dockerhub-login>/knowledge-hub
+docker pull aizhanbexatova/knowledge-hub:latest
+docker run -p 4000:4000 -e PORT=4000 aizhanbexatova/knowledge-hub:latest
 ```
 
 ### Build and run locally with Docker Compose
