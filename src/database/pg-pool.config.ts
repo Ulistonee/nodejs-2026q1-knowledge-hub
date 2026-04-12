@@ -1,7 +1,6 @@
 import type { PoolConfig } from 'pg';
 
 export type PgPoolFromEnvOptions = {
-  /** Для `npx prisma db seed` на хосте при `POSTGRES_HOST=db` из docker-compose */
   remapDockerDbToLocalhost?: boolean;
 };
 
@@ -16,10 +15,6 @@ function resolveHost(hostname: string, opts?: PgPoolFromEnvOptions): string {
   return hostname === 'db' ? '127.0.0.1' : hostname;
 }
 
-/**
- * Конфиг `pg` для PrismaPg. Nest в контейнере использует `DATABASE_URL` с хостом `db`;
- * на хосте — `localhost` в URL или в POSTGRES_HOST.
- */
 export function getPgPoolConfig(opts?: PgPoolFromEnvOptions): PoolConfig {
   const fallbackPassword = String(process.env.POSTGRES_PASSWORD ?? '');
   const fallbackUser = process.env.POSTGRES_USER ?? 'postgres';

@@ -10,8 +10,6 @@ ENV NODE_ENV=production
 WORKDIR /app
 COPY package.json package-lock.json ./
 RUN npm ci --omit=dev && \
-    # @prisma/client pulls in prisma CLI and its dev-only sub-dependencies;
-    # none of them are used at runtime — remove to shrink the image.
     rm -rf \
       node_modules/prisma \
       node_modules/@prisma/studio-core \
@@ -26,7 +24,6 @@ RUN npm ci --omit=dev && \
       node_modules/remeda \
       node_modules/hono
 COPY --from=build /app/dist ./dist
-# Copy generated Prisma client; skip edge/browser-only files not needed in Node.js
 COPY --from=build /app/generated ./dist/generated
 RUN rm -f \
       dist/generated/prisma/index-browser.js \
