@@ -57,6 +57,9 @@ model Article {
 
   comments Comment[]
   tags     Tag[]       @relation("ArticleToTag")
+
+  @@index([status])
+  @@index([categoryId])
 }
 
 model Comment {
