@@ -7,6 +7,9 @@ services:
       - 4000:4000
     env_file:
       - .env
+    environment:
+      # Внутри compose хост БД — `db`, не localhost из .env для разработки на хосте
+      DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}?schema=public
     healthcheck:
       test: ["CMD", "wget", "-qO-", "http://localhost:4000/health"]
       interval: 10s

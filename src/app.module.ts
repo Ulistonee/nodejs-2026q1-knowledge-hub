@@ -7,14 +7,22 @@ import {
 import { APP_GUARD } from '@nestjs/core';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
+import { ArticleModule } from './article/article.module';
 import { CategoryModule } from './category/category.module';
 import { CommentModule } from './comment/comment.module';
 import { ApiKeyGuard } from './common/guards/api-key.guard';
 import { LoggingMiddleware } from './common/middleware/logging.middleware';
+import { PrismaModule } from './prisma/prisma.module';
 import { UserModule } from './user/user.module';
 
 @Module({
-  imports: [UserModule, CategoryModule, CommentModule],
+  imports: [
+    PrismaModule,
+    UserModule,
+    CategoryModule,
+    ArticleModule,
+    CommentModule,
+  ],
   controllers: [AppController],
   providers: [
     AppService,

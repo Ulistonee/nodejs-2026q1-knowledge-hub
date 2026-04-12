@@ -3,12 +3,11 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { randomUUID } from 'crypto';
-import { ArticleService } from '../article/article.service';
-import { CommentService } from '../comment/comment.service';
 import { ListQueryDto } from '../common/dto/list-query.dto';
 import { PaginatedResult } from '../common/interfaces/paginated-result.interface';
 import { applyListQuery } from '../common/utils/apply-list-query';
+import { UserRole as PrismaUserRole } from '../../generated/prisma';
+import { PrismaService } from '../prisma/prisma.service';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdatePasswordDto } from './dto/update-password.dto';
 import { UserRole } from './enums/user-role.enum';
@@ -25,12 +24,27 @@ const USER_SORT_FIELDS: (keyof PublicUser)[] = [
 
 @Injectable()
 export class UserService {
-  private users: User[] = [];
+  constructor(private readonly prisma: PrismaService) {}
 
-  constructor(
-    private readonly articlesService: ArticleService,
-    private readonly commentsService: CommentService,
-  ) {}
+  private toUser(row: {
+    id: string;
+    login: string;
+    password: string;
+    role: string;
+    version: number;
+    createdAt: Date;
+    updatedAt: Date;
+  }): User {
+    return {
+      id: row.id,
+      login: row.login,
+      password: row.password,
+      role: row.role as UserRole,
+      version: row.version,
+      createdAt: row.createdAt.getTime(),
+      updatedAt: row.updatedAt.getTime(),
+    };
+  }
 
   private toPublic(user: User): PublicUser {
     const { password, ...rest } = user;
@@ -38,56 +52,58 @@ export class UserService {
     return rest;
   }
 
-  findAll(query: ListQueryDto): PublicUser[] | PaginatedResult<PublicUser> {
-    const items = this.users.map((u) => this.toPublic(u));
+  async findAll(
+    query: ListQueryDto,
+  ): Promise<PublicUser[] | PaginatedResult<PublicUser>> {
+    const rows = await this.prisma.user.findMany();
+    const items = rows.map((r) => this.toPublic(this.toUser(r)));
     return applyListQuery(items, query, USER_SORT_FIELDS);
   }
 
-  findOne(id: string): PublicUser {
-    const user = this.users.find((u) => u.id === id);
-    if (!user) {
+  async findOne(id: string): Promise<PublicUser> {
+    const row = await this.prisma.user.findUnique({ where: { id } });
+    if (!row) {
       throw new NotFoundException();
     }
-    return this.toPublic(user);
+    return this.toPublic(this.toUser(row));
   }
 
-  create(userDto: CreateUserDto): PublicUser {
-    const now = Date.now();
-    const user: User = {
-      id: randomUUID(),
-      login: userDto.login,
-      password: userDto.password,
-      role: userDto.role ?? UserRole.VIEWER,
-      createdAt: now,
-      updatedAt: now,
-      version: 1,
-    };
-    this.users.push(user);
-    return this.toPublic(user);
+  async create(userDto: CreateUserDto): Promise<PublicUser> {
+    const row = await this.prisma.user.create({
+      data: {
+        login: userDto.login,
+        password: userDto.password,
+        role: (userDto.role ?? UserRole.VIEWER) as unknown as PrismaUserRole,
+      },
+    });
+    return this.toPublic(this.toUser(row));
   }
 
-  updatePassword(id: string, dto: UpdatePasswordDto): PublicUser {
-    const user = this.users.find((u) => u.id === id);
-    if (!user) {
+  async updatePassword(
+    id: string,
+    dto: UpdatePasswordDto,
+  ): Promise<PublicUser> {
+    const row = await this.prisma.user.findUnique({ where: { id } });
+    if (!row) {
       throw new NotFoundException();
     }
-    if (user.password !== dto.oldPassword) {
+    if (row.password !== dto.oldPassword) {
       throw new ForbiddenException();
     }
-    user.password = dto.newPassword;
-    const now = Date.now();
-    user.updatedAt = now > user.createdAt ? now : user.createdAt + 1;
-    user.version += 1;
-    return this.toPublic(user);
+    const updated = await this.prisma.user.update({
+      where: { id },
+      data: {
+        password: dto.newPassword,
+        version: { increment: 1 },
+      },
+    });
+    return this.toPublic(this.toUser(updated));
   }
 
-  remove(id: string): void {
-    const idx = this.users.findIndex((u) => u.id === id);
-    if (idx === -1) {
+  async remove(id: string): Promise<void> {
+    const result = await this.prisma.user.deleteMany({ where: { id } });
+    if (result.count === 0) {
       throw new NotFoundException();
     }
-    this.articlesService.nullifyAuthor(id);
-    this.commentsService.removeByAuthor(id);
-    this.users.splice(idx, 1);
   }
 }
