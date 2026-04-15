@@ -14,6 +14,7 @@ import { ApiKeyGuard } from './common/guards/api-key.guard';
 import { LoggingMiddleware } from './common/middleware/logging.middleware';
 import { PrismaModule } from './prisma/prisma.module';
 import { UserModule } from './user/user.module';
+import { AuthModule } from './auth/auth.module';
 
 @Module({
   imports: [
@@ -22,6 +23,7 @@ import { UserModule } from './user/user.module';
     CategoryModule,
     ArticleModule,
     CommentModule,
+    AuthModule,
   ],
   controllers: [AppController],
   providers: [

@@ -1,8 +1,9 @@
 FROM node:24-alpine AS build
 WORKDIR /app
 COPY package.json package-lock.json ./
-RUN npm ci
+RUN npm ci --ignore-scripts
 COPY . .
+RUN npx prisma generate
 RUN npm run build
 
 FROM node:24-alpine AS production
@@ -23,12 +24,9 @@ RUN npm ci --omit=dev && \
       node_modules/chart.js \
       node_modules/remeda \
       node_modules/hono
+COPY --from=build /app/node_modules/.prisma ./node_modules/.prisma
+COPY --from=build /app/node_modules/@prisma/client ./node_modules/@prisma/client
 COPY --from=build /app/dist ./dist
-COPY --from=build /app/generated ./dist/generated
-RUN rm -f \
-      dist/generated/prisma/index-browser.js \
-      dist/generated/prisma/wasm-edge-light-loader.mjs \
-      dist/generated/prisma/wasm-worker-loader.mjs
 RUN addgroup -S appgroup && adduser -S appuser -G appgroup
 USER appuser
 EXPOSE 4000

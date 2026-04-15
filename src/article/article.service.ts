@@ -3,10 +3,7 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import {
-  ArticleStatus as PrismaArticleStatus,
-  Prisma,
-} from '../../generated/prisma';
+import { ArticleStatus as PrismaArticleStatus, Prisma } from '@prisma/client';
 import { ArticleListQueryDto } from '../common/dto/article-list-query.dto';
 import { PaginatedResult } from '../common/interfaces/paginated-result.interface';
 import { PrismaService } from '../prisma/prisma.service';
@@ -26,6 +23,18 @@ const ARTICLE_SORT_FIELDS: (keyof Article)[] = [
   'updatedAt',
 ];
 
+const API_TO_PRISMA_STATUS: Record<string, PrismaArticleStatus> = {
+  draft: PrismaArticleStatus.DRAFT,
+  published: PrismaArticleStatus.PUBLISHED,
+  archived: PrismaArticleStatus.ARCHIVED,
+};
+
+const PRISMA_TO_API_STATUS: Record<PrismaArticleStatus, ArticleStatus> = {
+  [PrismaArticleStatus.DRAFT]: ArticleStatus.DRAFT,
+  [PrismaArticleStatus.PUBLISHED]: ArticleStatus.PUBLISHED,
+  [PrismaArticleStatus.ARCHIVED]: ArticleStatus.ARCHIVED,
+};
+
 type ArticleWithTags = Prisma.ArticleGetPayload<{
   include: { tags: true };
 }>;
@@ -39,7 +48,7 @@ export class ArticleService {
       id: row.id,
       title: row.title,
       content: row.content,
-      status: row.status as ArticleStatus,
+      status: PRISMA_TO_API_STATUS[row.status],
       authorId: row.authorId,
       categoryId: row.categoryId,
       tags: row.tags.map((t) => t.name),
@@ -65,7 +74,7 @@ export class ArticleService {
   private buildWhere(dto: ArticleListQueryDto): Prisma.ArticleWhereInput {
     const where: Prisma.ArticleWhereInput = {};
     if (dto.status) {
-      where.status = dto.status as PrismaArticleStatus;
+      where.status = API_TO_PRISMA_STATUS[dto.status];
     }
     if (dto.categoryId) {
       where.categoryId = dto.categoryId;
@@ -131,7 +140,7 @@ export class ArticleService {
         title: dto.title,
         content: dto.content,
         status: dto.status
-          ? (dto.status as unknown as PrismaArticleStatus)
+          ? API_TO_PRISMA_STATUS[dto.status]
           : PrismaArticleStatus.DRAFT,
         authorId: dto.authorId ?? null,
         categoryId: dto.categoryId ?? null,
@@ -161,7 +170,7 @@ export class ArticleService {
       data.content = dto.content;
     }
     if (dto.status !== undefined) {
-      data.status = dto.status as unknown as PrismaArticleStatus;
+      data.status = API_TO_PRISMA_STATUS[dto.status];
     }
     if (dto.authorId !== undefined) {
       data.authorId = dto.authorId;

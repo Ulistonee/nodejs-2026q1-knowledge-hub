@@ -1,11 +1,7 @@
 import 'dotenv/config';
 import { PrismaPg } from '@prisma/adapter-pg';
+import { ArticleStatus, PrismaClient, UserRole } from '@prisma/client';
 import { Pool } from 'pg';
-import {
-  ArticleStatus,
-  PrismaClient,
-  UserRole,
-} from '../generated/prisma';
 import { getPgPoolConfig } from '../src/database/pg-pool.config';
 
 const pool = new Pool(

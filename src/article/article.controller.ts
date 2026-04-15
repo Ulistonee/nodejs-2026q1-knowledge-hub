@@ -29,6 +29,7 @@ export class ArticleController {
   findOne(@Param('id', ParseUUIDPipe) id: string) {
     return this.articleService.findOne(id);
   }
+
   @Post()
   @HttpCode(HttpStatus.CREATED)
   create(@Body() dto: CreateArticleDto) {
@@ -42,6 +43,7 @@ export class ArticleController {
   ) {
     return this.articleService.update(id, dto);
   }
+  
   @Delete(':id')
   @HttpCode(HttpStatus.NO_CONTENT)
   remove(@Param('id', ParseUUIDPipe) id: string) {
