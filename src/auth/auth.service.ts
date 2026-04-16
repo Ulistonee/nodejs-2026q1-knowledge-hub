@@ -2,12 +2,14 @@ import {
   BadRequestException,
   ForbiddenException,
   Injectable,
+  UnauthorizedException,
 } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { PrismaService } from '../prisma/prisma.service';
 import { SignupDto } from './dto/signup.dto';
 import * as bcrypt from 'bcrypt';
 import { LoginDto } from './dto/login.dto';
+import { RefreshDto } from './dto/refresh.dto';
 
 @Injectable()
 export class AuthService {
@@ -16,35 +18,56 @@ export class AuthService {
     private readonly jwtService: JwtService,
   ) {}
 
+  private async generateTokens(payload: {
+    userId: string;
+    login: string;
+    role: string;
+  }) {
+    const [accessToken, refreshToken] = await Promise.all([
+      this.jwtService.signAsync(payload, {
+        secret: process.env.JWT_SECRET_KEY,
+        expiresIn: (process.env.TOKEN_EXPIRE_TIME ?? '15m') as never,
+      }),
+      this.jwtService.signAsync(payload, {
+        secret: process.env.JWT_SECRET_REFRESH_KEY,
+        expiresIn: (process.env.TOKEN_REFRESH_EXPIRE_TIME ?? '7d') as never,
+      }),
+    ]);
+    return { accessToken, refreshToken };
+  }
+
   async signup(signupDto: SignupDto) {
-    const user = await this.prisma.user.findUnique({
-      where: {
-        login: signupDto.login,
-      },
+    const existing = await this.prisma.user.findUnique({
+      where: { login: signupDto.login },
     });
-    if (user) {
+    if (existing) {
       throw new BadRequestException('Login is already taken');
     }
+
+    const adminCount = await this.prisma.user.count({
+      where: { role: 'ADMIN' },
+    });
+    const role = adminCount === 0 ? 'ADMIN' : 'VIEWER';
+
     const hashedPassword = await bcrypt.hash(signupDto.password, 10);
-    await this.prisma.user.create({
+    const user = await this.prisma.user.create({
       data: {
         login: signupDto.login,
         password: hashedPassword,
+        role,
       },
     });
-    return { message: 'User created successfully' };
+    return { id: user.id };
   }
 
   async login(loginDto: LoginDto) {
     const user = await this.prisma.user.findUnique({
-      where: {
-        login: loginDto.login,
-      },
+      where: { login: loginDto.login },
     });
-
     if (!user) {
       throw new ForbiddenException('Invalid login or password');
     }
+
     const isPasswordValid = await bcrypt.compare(
       loginDto.password,
       user.password,
@@ -53,21 +76,30 @@ export class AuthService {
       throw new ForbiddenException('Invalid login or password');
     }
 
-    const payload = {
+    return this.generateTokens({
       userId: user.id,
       login: user.login,
-      role: user.role,
-    };
-
-    const accessToken = await this.jwtService.signAsync(payload, {
-      secret: process.env.JWT_SECRET_KEY,
-      expiresIn: (process.env.TOKEN_EXPIRE_TIME ?? '15m') as never,
+      role: user.role.toLowerCase(),
     });
-    const refreshToken = await this.jwtService.signAsync(payload, {
-      secret: process.env.JWT_SECRET_REFRESH_KEY,
-      expiresIn: (process.env.TOKEN_REFRESH_EXPIRE_TIME ?? '7d') as never,
-    });
+  }
 
-    return { accessToken, refreshToken };
+  async refresh(refreshDto: RefreshDto) {
+    if (!refreshDto.refreshToken || typeof refreshDto.refreshToken !== 'string') {
+      throw new UnauthorizedException('No refresh token provided');
+    }
+
+    try {
+      const decoded = await this.jwtService.verifyAsync(refreshDto.refreshToken, {
+        secret: process.env.JWT_SECRET_REFRESH_KEY,
+      });
+
+      return this.generateTokens({
+        userId: decoded.userId,
+        login: decoded.login,
+        role: decoded.role,
+      });
+    } catch {
+      throw new ForbiddenException('Invalid or expired refresh token');
+    }
   }
 }

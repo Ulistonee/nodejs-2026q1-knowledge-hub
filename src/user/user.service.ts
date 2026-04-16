@@ -1,15 +1,17 @@
 import {
+  BadRequestException,
   ForbiddenException,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
 import { UserRole as PrismaUserRole } from '@prisma/client';
+import * as bcrypt from 'bcrypt';
 import { ListQueryDto } from '../common/dto/list-query.dto';
 import { PaginatedResult } from '../common/interfaces/paginated-result.interface';
 import { applyListQuery } from '../common/utils/apply-list-query';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateUserDto } from './dto/create-user.dto';
-import { UpdatePasswordDto } from './dto/update-password.dto';
+import { UpdateUserDto } from './dto/update-user.dto';
 import { UserRole } from './enums/user-role.enum';
 import { PublicUser, User } from './interfaces/user';
 
@@ -81,33 +83,57 @@ export class UserService {
   }
 
   async create(userDto: CreateUserDto): Promise<PublicUser> {
+    const existing = await this.prisma.user.findUnique({
+      where: { login: userDto.login },
+    });
+    if (existing) {
+      throw new BadRequestException('Login is already taken');
+    }
+
+    const hashedPassword = await bcrypt.hash(userDto.password, 10);
     const row = await this.prisma.user.create({
       data: {
         login: userDto.login,
-        password: userDto.password,
+        password: hashedPassword,
         role: API_TO_PRISMA_ROLE[userDto.role ?? UserRole.VIEWER] ?? PrismaUserRole.VIEWER,
       },
     });
     return this.toPublic(this.toUser(row));
   }
 
-  async updatePassword(
-    id: string,
-    dto: UpdatePasswordDto,
-  ): Promise<PublicUser> {
+  async update(id: string, dto: UpdateUserDto): Promise<PublicUser> {
+    const hasFields =
+      dto.role !== undefined ||
+      dto.oldPassword !== undefined ||
+      dto.newPassword !== undefined;
+    if (!hasFields) {
+      throw new BadRequestException('No fields to update');
+    }
+
     const row = await this.prisma.user.findUnique({ where: { id } });
     if (!row) {
       throw new NotFoundException();
     }
-    if (row.password !== dto.oldPassword) {
-      throw new ForbiddenException();
+
+    const data: Record<string, unknown> = {};
+
+    if (dto.role !== undefined) {
+      data.role =
+        API_TO_PRISMA_ROLE[dto.role] ?? PrismaUserRole.VIEWER;
     }
+
+    if (dto.oldPassword !== undefined && dto.newPassword !== undefined) {
+      const isMatch = await bcrypt.compare(dto.oldPassword, row.password);
+      if (!isMatch) {
+        throw new ForbiddenException();
+      }
+      data.password = await bcrypt.hash(dto.newPassword, 10);
+      data.version = { increment: 1 };
+    }
+
     const updated = await this.prisma.user.update({
       where: { id },
-      data: {
-        password: dto.newPassword,
-        version: { increment: 1 },
-      },
+      data,
     });
     return this.toPublic(this.toUser(updated));
   }

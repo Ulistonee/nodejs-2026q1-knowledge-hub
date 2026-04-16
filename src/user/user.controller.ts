@@ -11,9 +11,10 @@ import {
   Put,
   Query,
 } from '@nestjs/common';
+import { Roles } from '../common/decorators/roles.decorator';
 import { ListQueryDto } from '../common/dto/list-query.dto';
 import { CreateUserDto } from './dto/create-user.dto';
-import { UpdatePasswordDto } from './dto/update-password.dto';
+import { UpdateUserDto } from './dto/update-user.dto';
 import { UserService } from './user.service';
 
 @Controller('user')
@@ -30,20 +31,23 @@ export class UserController {
     return this.userService.findOne(id);
   }
 
+  @Roles('admin')
   @Post()
   @HttpCode(HttpStatus.CREATED)
   create(@Body() createUserDto: CreateUserDto) {
     return this.userService.create(createUserDto);
   }
 
+  @Roles('admin')
   @Put(':id')
-  updatePassword(
+  update(
     @Param('id', ParseUUIDPipe) id: string,
-    @Body() dto: UpdatePasswordDto,
+    @Body() dto: UpdateUserDto,
   ) {
-    return this.userService.updatePassword(id, dto);
+    return this.userService.update(id, dto);
   }
 
+  @Roles('admin')
   @Delete(':id')
   @HttpCode(HttpStatus.NO_CONTENT)
   remove(@Param('id', ParseUUIDPipe) id: string) {

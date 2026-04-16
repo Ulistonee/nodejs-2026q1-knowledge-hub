@@ -1,5 +1,6 @@
 import {
   BadRequestException,
+  ForbiddenException,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
@@ -156,10 +157,21 @@ export class ArticleService {
     return this.mapArticle(row);
   }
 
-  async update(id: string, dto: UpdateArticleDto): Promise<Article> {
+  async update(
+    id: string,
+    dto: UpdateArticleDto,
+    currentUser?: { userId: string; role: string },
+  ): Promise<Article> {
     const existing = await this.prisma.article.findUnique({ where: { id } });
     if (!existing) {
       throw new NotFoundException();
+    }
+
+    if (
+      currentUser?.role === 'editor' &&
+      existing.authorId !== currentUser.userId
+    ) {
+      throw new ForbiddenException('Editors can only update their own articles');
     }
 
     const data: Prisma.ArticleUncheckedUpdateInput = {};

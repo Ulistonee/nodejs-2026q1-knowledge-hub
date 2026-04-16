@@ -6,10 +6,31 @@ import {
   commentsRoutes,
   usersRoutes,
 } from './endpoints';
+import {
+  shouldAuthorizationBeTested,
+  getTokenAndUserId,
+  removeTokenUser,
+} from './utils';
 
 describe('Pagination and sorting (e2e)', () => {
   const req = request;
-  const headers = { Accept: 'application/json' };
+  const headers: Record<string, string> = { Accept: 'application/json' };
+  let mockUserId: string | undefined;
+
+  beforeAll(async () => {
+    if (shouldAuthorizationBeTested) {
+      const result = await getTokenAndUserId(req);
+      headers['Authorization'] = result.token;
+      mockUserId = result.mockUserId;
+    }
+  });
+
+  afterAll(async () => {
+    if (mockUserId) {
+      await removeTokenUser(req, mockUserId, headers);
+    }
+    delete headers['Authorization'];
+  });
 
   describe('GET /user', () => {
     it('returns paginated envelope when page query is present', async () => {
