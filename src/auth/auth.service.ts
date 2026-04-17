@@ -10,6 +10,7 @@ import { SignupDto } from './dto/signup.dto';
 import * as bcrypt from 'bcrypt';
 import { LoginDto } from './dto/login.dto';
 import { RefreshDto } from './dto/refresh.dto';
+import { LogoutDto } from './dto/logout.dto';
 
 @Injectable()
 export class AuthService {
@@ -88,6 +89,13 @@ export class AuthService {
       throw new UnauthorizedException('No refresh token provided');
     }
 
+    const revoked = await this.prisma.revokedToken.findUnique({
+      where: { token: refreshDto.refreshToken },
+    });
+    if (revoked) {
+      throw new ForbiddenException('Invalid or expired refresh token');
+    }
+
     try {
       const decoded = await this.jwtService.verifyAsync(refreshDto.refreshToken, {
         secret: process.env.JWT_SECRET_REFRESH_KEY,
@@ -101,5 +109,30 @@ export class AuthService {
     } catch {
       throw new ForbiddenException('Invalid or expired refresh token');
     }
+  }
+
+  async logout(logoutDto: LogoutDto): Promise<void> {
+    if (!logoutDto.refreshToken || typeof logoutDto.refreshToken !== 'string') {
+      throw new BadRequestException('refreshToken is required');
+    }
+    const token = logoutDto.refreshToken;
+
+    let expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
+    try {
+      const decoded = await this.jwtService.verifyAsync(token, {
+        secret: process.env.JWT_SECRET_REFRESH_KEY,
+        ignoreExpiration: true,
+      });
+      if (decoded?.exp) {
+        expiresAt = new Date(decoded.exp * 1000);
+      }
+    } catch {
+    }
+
+    await this.prisma.revokedToken.upsert({
+      where: { token },
+      update: {},
+      create: { token, expiresAt },
+    });
   }
 }

@@ -79,3 +79,12 @@ model Tag {
 
   articles Article[] @relation("ArticleToTag")
 }
+
+model RevokedToken {
+  id        String   @id @default(uuid()) @db.Uuid
+  token     String   @unique @db.Text
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  @@index([expiresAt])
+}
