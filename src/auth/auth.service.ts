@@ -46,9 +46,9 @@ export class AuthService {
     }
 
     const adminCount = await this.prisma.user.count({
-      where: { role: 'ADMIN' },
+      where: { role: 'admin' },
     });
-    const role = adminCount === 0 ? 'ADMIN' : 'VIEWER';
+    const role = adminCount === 0 ? 'admin' : 'viewer';
 
     const hashedPassword = await bcrypt.hash(signupDto.password, 10);
     const user = await this.prisma.user.create({

@@ -25,15 +25,15 @@ const USER_SORT_FIELDS: (keyof PublicUser)[] = [
 ];
 
 const API_TO_PRISMA_ROLE: Record<string, PrismaUserRole> = {
-  admin: PrismaUserRole.ADMIN,
-  editor: PrismaUserRole.EDITOR,
-  viewer: PrismaUserRole.VIEWER,
+  admin: PrismaUserRole.admin,
+  editor: PrismaUserRole.editor,
+  viewer: PrismaUserRole.viewer,
 };
 
 const PRISMA_TO_API_ROLE: Record<PrismaUserRole, UserRole> = {
-  [PrismaUserRole.ADMIN]: UserRole.ADMIN,
-  [PrismaUserRole.EDITOR]: UserRole.EDITOR,
-  [PrismaUserRole.VIEWER]: UserRole.VIEWER,
+  [PrismaUserRole.admin]: UserRole.ADMIN,
+  [PrismaUserRole.editor]: UserRole.EDITOR,
+  [PrismaUserRole.viewer]: UserRole.VIEWER,
 };
 
 @Injectable()
@@ -95,7 +95,7 @@ export class UserService {
       data: {
         login: userDto.login,
         password: hashedPassword,
-        role: API_TO_PRISMA_ROLE[userDto.role ?? UserRole.VIEWER] ?? PrismaUserRole.VIEWER,
+        role: API_TO_PRISMA_ROLE[userDto.role ?? UserRole.VIEWER] ?? PrismaUserRole.viewer,
       },
     });
     return this.toPublic(this.toUser(row));
@@ -119,7 +119,7 @@ export class UserService {
 
     if (dto.role !== undefined) {
       data.role =
-        API_TO_PRISMA_ROLE[dto.role] ?? PrismaUserRole.VIEWER;
+        API_TO_PRISMA_ROLE[dto.role] ?? PrismaUserRole.viewer;
     }
 
     if (dto.oldPassword !== undefined && dto.newPassword !== undefined) {

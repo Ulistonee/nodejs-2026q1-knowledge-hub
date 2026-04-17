@@ -1,5 +1,5 @@
 {
-  "name": "home-library",
+  "name": "knowledge-hub",
   "version": "0.0.1",
   "description": "",
   "author": "",
@@ -48,9 +48,9 @@
     "uuid": "^9.0.1"
   },
   "devDependencies": {
-    "@nestjs/cli": "^11.0.18",
-    "@nestjs/schematics": "^11.0.10",
-    "@nestjs/testing": "^11.1.18",
+    "@nestjs/cli": "^11.0.21",
+    "@nestjs/schematics": "^11.1.0",
+    "@nestjs/testing": "^11.1.19",
     "@types/bcrypt": "^5.0.2",
     "@types/express": "^4.17.21",
     "@types/jest": "^29.5.12",

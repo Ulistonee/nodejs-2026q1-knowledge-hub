@@ -22,7 +22,7 @@ async function main() {
     data: {
       login: 'seed_admin',
       password: await bcrypt.hash('admin123', 10),
-      role: UserRole.ADMIN,
+      role: UserRole.admin,
     },
   });
 
@@ -30,7 +30,7 @@ async function main() {
     data: {
       login: 'seed_editor',
       password: await bcrypt.hash('editor123', 10),
-      role: UserRole.EDITOR,
+      role: UserRole.editor,
     },
   });
 

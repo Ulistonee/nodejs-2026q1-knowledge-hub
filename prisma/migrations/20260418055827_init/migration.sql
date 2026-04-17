@@ -1,5 +1,5 @@
 -- CreateEnum
-CREATE TYPE "UserRole" AS ENUM ('ADMIN', 'EDITOR', 'VIEWER');
+CREATE TYPE "UserRole" AS ENUM ('admin', 'editor', 'viewer');
 
 -- CreateEnum
 CREATE TYPE "ArticleStatus" AS ENUM ('DRAFT', 'PUBLISHED', 'ARCHIVED');
@@ -9,7 +9,8 @@ CREATE TABLE "User" (
     "id" UUID NOT NULL,
     "login" TEXT NOT NULL,
     "password" TEXT NOT NULL,
-    "role" "UserRole" NOT NULL DEFAULT 'VIEWER',
+    "role" "UserRole" NOT NULL DEFAULT 'viewer',
+    "version" INTEGER NOT NULL DEFAULT 1,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
 
@@ -59,6 +60,16 @@ CREATE TABLE "Tag" (
 );
 
 -- CreateTable
+CREATE TABLE "RevokedToken" (
+    "id" UUID NOT NULL,
+    "token" TEXT NOT NULL,
+    "expiresAt" TIMESTAMP(3) NOT NULL,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT "RevokedToken_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
 CREATE TABLE "_ArticleToTag" (
     "A" UUID NOT NULL,
     "B" UUID NOT NULL,
@@ -70,7 +81,19 @@ CREATE TABLE "_ArticleToTag" (
 CREATE UNIQUE INDEX "User_login_key" ON "User"("login");
 
 -- CreateIndex
+CREATE INDEX "Article_status_idx" ON "Article"("status");
+
+-- CreateIndex
+CREATE INDEX "Article_categoryId_idx" ON "Article"("categoryId");
+
+-- CreateIndex
 CREATE UNIQUE INDEX "Tag_name_key" ON "Tag"("name");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "RevokedToken_token_key" ON "RevokedToken"("token");
+
+-- CreateIndex
+CREATE INDEX "RevokedToken_expiresAt_idx" ON "RevokedToken"("expiresAt");
 
 -- CreateIndex
 CREATE INDEX "_ArticleToTag_B_index" ON "_ArticleToTag"("B");
