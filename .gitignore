@@ -41,3 +41,4 @@ lerna-debug.log*
 score.md
 .env
 assignment.md
+.task/*
