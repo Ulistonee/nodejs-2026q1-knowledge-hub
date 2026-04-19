@@ -1,6 +1,9 @@
 # Knowledge Hub API
 
-NestJS REST API for users, categories, articles, and comments. Data is stored **in memory** (reset on server restart). OpenAPI (Swagger) UI is available at `/doc`.
+NestJS REST API for users, categories, articles, and comments. Data is persisted
+in PostgreSQL via Prisma ORM. All business routes are protected by JWT
+authentication with role-based access control (`viewer` / `editor` / `admin`).
+OpenAPI (Swagger) UI is available at `/doc`.
 
 ---
 
@@ -69,6 +72,58 @@ Avoid trailing spaces in URLs (e.g. use `/user`, not `/user%20`).
 ### Health check
 
 - **`GET /health`** — returns a small JSON payload (e.g. `{ "status": "ok" }`) for liveness checks.
+
+### Authentication
+
+The API uses JWT access + refresh tokens. The access token must be sent with
+every request to protected routes using the `Bearer` scheme:
+
+```http
+Authorization: Bearer <accessToken>
+```
+
+Public routes (no token required): `GET /`, `GET /health`, `GET /doc`,
+`POST /auth/signup`, `POST /auth/login`, `POST /auth/refresh`. All other
+routes respond with **401** if the `Authorization` header is missing, not in
+the `Bearer` form, or if the access token is invalid/expired.
+
+Auth endpoints:
+
+| Method & route | Body | Response |
+|---|---|---|
+| `POST /auth/signup` | `{ login, password }` | `201 { id }` / `400` on validation or duplicate login |
+| `POST /auth/login` | `{ login, password }` | `200 { accessToken, refreshToken }` / `400` on invalid DTO / `403` on bad credentials |
+| `POST /auth/refresh` | `{ refreshToken }` | `200 { accessToken, refreshToken }` / `401` without body / `403` on invalid/expired/revoked refresh token |
+| `POST /auth/logout` *(auth required)* | `{ refreshToken }` | `204` — blacklists the refresh token so it cannot be used again |
+
+JWT access token payload:
+
+```json
+{ "userId": "<uuid>", "login": "...", "role": "admin" | "editor" | "viewer" }
+```
+
+Access-token TTL and refresh-token TTL are configured via `.env`
+(`TOKEN_EXPIRE_TIME`, `TOKEN_REFRESH_EXPIRE_TIME`). Secrets for signing are
+`JWT_SECRET_KEY` and `JWT_SECRET_REFRESH_KEY` in `.env`.
+
+`POST /auth/signup` and `POST /auth/login` are additionally rate-limited
+(via `@nestjs/throttler`) to mitigate brute-force.
+
+### Role-based access control (RBAC)
+
+Every authenticated request carries the user role in the JWT payload. The
+`RolesGuard` enforces the following policy:
+
+| Role | Permissions |
+|---|---|
+| `viewer` | Read-only: all `GET` endpoints. |
+| `editor` | Same as `viewer` + can `POST` and `PUT` their own articles and comments. Cannot delete other users' content or manage categories/users. |
+| `admin` | Full access to every resource and operation. |
+
+Unauthorized operations return **403** with a descriptive message.
+
+New users created via `POST /auth/signup` are always assigned the `viewer`
+role. Role changes are performed only by an `admin` through `PUT /user/:id`.
 
 ### List endpoints: pagination and sorting
 
@@ -142,25 +197,41 @@ Example snapshot from `docker scout cves` (numbers change when you rebuild, upda
 
 ## Testing
 
-1. Start the API in one terminal:
+1. Start the API in one terminal (the Docker setup runs `prisma migrate deploy`
+   on boot, so the DB is ready automatically):
 
    ```bash
+   docker compose up --build
+   ```
+
+   or, for local development without Docker:
+
+   ```bash
+   npm run prisma:migrate
    npm run start:dev
    ```
 
 2. In another terminal, run tests from the project root:
 
-   ```bash
-   npm run test
-   ```
+   | Command | Scope |
+   |---|---|
+   | `npm run test` | base end-to-end suite (CRUD, pagination, sorting) |
+   | `npm run test:auth` | base suite + auth-required checks (all protected routes reject without token) |
+   | `npm run test:refresh` | refresh-token flow (issue, expire, invalidate) |
+   | `npm run test:rbac` | RBAC policy per role (viewer / editor / admin) |
+
 ---
 
 ## Project structure (high level)
 
 - `src/main.ts` — bootstrap, global `ValidationPipe`, Swagger at `/doc`, `PORT`.
-- `src/app.module.ts` — root module, logging middleware, global `ApiKeyGuard` (optional).
+- `src/app.module.ts` — root module, logging middleware, global `JwtAuthGuard` and `RolesGuard`, `ThrottlerGuard`.
+- `src/auth/` — signup / login / refresh / logout, JWT issuing and refresh-token blacklist.
 - `src/user/`, `src/category/`, `src/article/`, `src/comment/` — feature modules (controller / service / DTOs).
-- `src/common/` — shared middleware, guards, list-query DTOs, `applyListQuery` helper.
-- `test/` — Jest e2e specs (`rootDir` in `jest.config.json`).
+- `src/common/decorators/` — `@Public()` to opt out of auth, `@Roles(...)` to require roles.
+- `src/common/guards/` — `JwtAuthGuard`, `RolesGuard`, `ApiKeyGuard`.
+- `src/common/` — shared middleware, list-query DTOs, `applyListQuery` helper.
+- `prisma/` — Prisma schema, migrations, optional seed script.
+- `test/` — Jest e2e specs (`rootDir` in `jest.config.json`); `test/auth`, `test/refresh`, `test/rbac` cover the auth stage.
 
 ---
