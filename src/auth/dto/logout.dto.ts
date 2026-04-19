@@ -1,7 +1,5 @@
-import { Allow, IsOptional } from 'class-validator';
+import { IsNotEmpty, IsString } from 'class-validator';
 
 export class LogoutDto {
-  @Allow()
-  @IsOptional()
-  refreshToken?: unknown;
+  @IsString() @IsNotEmpty() refreshToken: string;
 }

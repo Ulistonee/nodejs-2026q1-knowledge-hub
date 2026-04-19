@@ -4,7 +4,6 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { UserRole as PrismaUserRole } from '@prisma/client';
 import * as bcrypt from 'bcrypt';
 import { ListQueryDto } from '../common/dto/list-query.dto';
 import { PaginatedResult } from '../common/interfaces/paginated-result.interface';
@@ -24,18 +23,6 @@ const USER_SORT_FIELDS: (keyof PublicUser)[] = [
   'version',
 ];
 
-const API_TO_PRISMA_ROLE: Record<string, PrismaUserRole> = {
-  admin: PrismaUserRole.admin,
-  editor: PrismaUserRole.editor,
-  viewer: PrismaUserRole.viewer,
-};
-
-const PRISMA_TO_API_ROLE: Record<PrismaUserRole, UserRole> = {
-  [PrismaUserRole.admin]: UserRole.ADMIN,
-  [PrismaUserRole.editor]: UserRole.EDITOR,
-  [PrismaUserRole.viewer]: UserRole.VIEWER,
-};
-
 @Injectable()
 export class UserService {
   constructor(private readonly prisma: PrismaService) {}
@@ -53,7 +40,7 @@ export class UserService {
       id: row.id,
       login: row.login,
       password: row.password,
-      role: PRISMA_TO_API_ROLE[row.role as PrismaUserRole] ?? (row.role as UserRole),
+      role: row.role as UserRole,
       version: row.version,
       createdAt: row.createdAt.getTime(),
       updatedAt: row.updatedAt.getTime(),
@@ -95,7 +82,7 @@ export class UserService {
       data: {
         login: userDto.login,
         password: hashedPassword,
-        role: API_TO_PRISMA_ROLE[userDto.role ?? UserRole.VIEWER] ?? PrismaUserRole.viewer,
+        role: userDto.role ?? UserRole.VIEWER,
       },
     });
     return this.toPublic(this.toUser(row));
@@ -118,8 +105,7 @@ export class UserService {
     const data: Record<string, unknown> = {};
 
     if (dto.role !== undefined) {
-      data.role =
-        API_TO_PRISMA_ROLE[dto.role] ?? PrismaUserRole.viewer;
+      data.role = dto.role;
     }
 
     if (dto.oldPassword !== undefined && dto.newPassword !== undefined) {

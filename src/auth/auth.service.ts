@@ -80,7 +80,7 @@ export class AuthService {
     return this.generateTokens({
       userId: user.id,
       login: user.login,
-      role: user.role.toLowerCase(),
+      role: user.role,
     });
   }
 
@@ -112,9 +112,6 @@ export class AuthService {
   }
 
   async logout(logoutDto: LogoutDto): Promise<void> {
-    if (!logoutDto.refreshToken || typeof logoutDto.refreshToken !== 'string') {
-      throw new BadRequestException('refreshToken is required');
-    }
     const token = logoutDto.refreshToken;
 
     let expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
@@ -127,6 +124,7 @@ export class AuthService {
         expiresAt = new Date(decoded.exp * 1000);
       }
     } catch {
+      // token is invalid/garbled; still blacklist it to prevent reuse
     }
 
     await this.prisma.revokedToken.upsert({
