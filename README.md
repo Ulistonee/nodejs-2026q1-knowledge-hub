@@ -30,10 +30,8 @@ the log file size limit in **kilobytes** before rotation (default `1024`).
 ### Build and run locally with Docker Compose
 
 ```bash
-
 # Start all services (app + PostgreSQL)
 docker compose up --build
-
 ```
 
 ### Docker Scout CVE report (brief)

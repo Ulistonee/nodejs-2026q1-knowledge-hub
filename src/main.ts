@@ -26,8 +26,8 @@ async function bootstrap(): Promise<void> {
   );
 
   const config = new DocumentBuilder()
-    .setTitle('My API')
-    .setDescription('API description')
+    .setTitle('Knowledge Hub API')
+    .setDescription('Articles, comments, users, and auth (JWT + optional API key).')
     .setVersion('1.0')
     .build();
   const document = SwaggerModule.createDocument(app, config);

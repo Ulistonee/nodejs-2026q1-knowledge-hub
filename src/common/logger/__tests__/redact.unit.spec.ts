@@ -50,6 +50,15 @@ describe('redactSensitive (unit)', () => {
     expect(out.ApiKey).toBe(REDACTED);
   });
 
+  it('redacts snake_case token-style keys', () => {
+    const out = redactSensitive({
+      access_token: 'a',
+      refresh_token: 'b',
+    }) as Record<string, unknown>;
+    expect(out.access_token).toBe(REDACTED);
+    expect(out.refresh_token).toBe(REDACTED);
+  });
+
   it('stops recursing past depth limit', () => {
     type Cyclic = { value: string; child?: Cyclic };
     let chain: Cyclic = { value: 'leaf' };
