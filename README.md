@@ -1,72 +1,93 @@
-# Home Library Service
+## Installation
 
-## Prerequisites
+1. Clone the repository:
 
-- Git - [Download & Install Git](https://git-scm.com/downloads).
-- Node.js - [Download & Install Node.js](https://nodejs.org/en/download/) and the npm package manager.
+   ```bash
+   git clone https://github.com/Ulistonee/nodejs-2026q1-knowledge-hub
+   cd nodejs-2026q1-knowledge-hub
+   ```
 
-## Downloading
+2. Install dependencies:
 
+   ```bash
+   npm install
+   ```
+
+3. Create a local environment file from the example:
+
+   ```bash
+   cp .env.example .env
+   ```
+
+4. Edit `.env` if needed
+
+### Logging (optional tuning)
+
+`LOG_LEVEL` (default `log`) caps how chatty the Nest logger is. In production, set
+`NODE_ENV=production` for JSON logs to stdout and to `LOG_DIR`/`app.log`. `LOG_MAX_FILE_SIZE` is
+the log file size limit in **kilobytes** before rotation (default `1024`).
+
+### Build and run locally with Docker Compose
+
+```bash
+# Start all services (app + PostgreSQL)
+docker compose up --build
 ```
-git clone {repository URL}
+
+### Docker Scout CVE report (brief)
+
+Build an image, then scan (image name may differ; with Compose use `docker images` and pick the `*-app` tag):
+
+```bash
+docker build -t knowledge-hub-app .
+docker scout cves knowledge-hub-app
 ```
 
-## Installing NPM modules
+Example snapshot from `docker scout cves` (numbers change when you rebuild, update the base image, or when Scout refreshes its advisories):
 
-```
-npm install
-```
+| | |
+|---|---|
+| Image | `nodejs-2026q1-knowledge-hub-app:latest` |
+| Platform | `linux/arm64` |
+| Packages indexed | ~358 |
+| Severities | 0 Critical, 7 High, 4 Medium, 1 Low, 5 Unspecified (17 findings in 7 packages) |
 
-## Running application
-
-```
-npm start
-```
-
-After starting the app on port (4000 as default) you can open
-in your browser OpenAPI documentation by typing http://localhost:4000/doc/.
-For more information about OpenAPI/Swagger please visit https://swagger.io/.
+---
 
 ## Testing
 
-After application running open new terminal and enter:
+### Unit tests (Vitest)
 
-To run all tests without authorization
+Unit tests live next to the code under `src/**/__tests__/*.unit.spec.ts` and run
+in isolation — Prisma and other I/O is mocked, no network or DB is required.
 
-```
-npm run test
-```
+| Command | Scope |
+|---|---|
+| `npm run test` | runs the full unit-test suite via Vitest |
+| `npm run test:unit` | alias of `npm run test` (unit tests only) |
+| `npm run test:coverage` | runs all unit tests with v8 coverage and enforces the configured thresholds (lines ≥ 90%, branches ≥ 85%, statements ≥ 90%, functions ≥ 85%); exits non-zero if any threshold is missed |
+| `npm run test:watch` | watch mode for local development |
 
-To run only one of all test suites
+Coverage thresholds are configured in `vitest.config.ts`.
 
-```
-npm run test -- <path to suite>
-```
+### Integration / e2e tests (Jest)
 
-To run all test with authorization
+End-to-end tests live in `test/` and require a running API + PostgreSQL.
 
-```
-npm run test:auth
-```
+1. Start the API in one terminal
 
-To run only specific test suite with authorization
 
-```
-npm run test:auth -- <path to suite>
-```
+   ```bash
+   docker compose up --build
+   ```
 
-### Auto-fix and format
+2. In another terminal, run tests from the project root:
 
-```
-npm run lint
-```
+   | Command | Scope |
+   |---|---|
+   | `npm run test:e2e` | base end-to-end suite (CRUD, pagination, sorting) |
+   | `npm run test:auth` | base suite + auth-required checks (all protected routes reject without token) |
+   | `npm run test:refresh` | refresh-token flow (issue, expire, invalidate) |
+   | `npm run test:rbac` | RBAC policy per role (viewer / editor / admin) |
 
-```
-npm run format
-```
-
-### Debugging in VSCode
-
-Press <kbd>F5</kbd> to debug.
-
-For more information, visit: https://code.visualstudio.com/docs/editor/debugging
+---
