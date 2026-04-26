@@ -127,6 +127,22 @@ describe('ArticleService (unit)', () => {
       expect(result).toMatchObject({ total: 20, page: 2, limit: 5 });
       expect(result.data).toHaveLength(1);
     });
+
+    it('returns a plain array (no pagination envelope) when page and limit are omitted', async () => {
+      prisma.article.findMany.mockResolvedValue([
+        buildArticleRow({ id: 'a-1' }),
+        buildArticleRow({ id: 'a-2' }),
+      ]);
+
+      const result = await service.findAll({});
+
+      expect(Array.isArray(result)).toBe(true);
+      expect(result).toHaveLength(2);
+      expect(prisma.article.count).not.toHaveBeenCalled();
+      const callArg = prisma.article.findMany.mock.calls[0][0];
+      expect(callArg).not.toHaveProperty('skip');
+      expect(callArg).not.toHaveProperty('take');
+    });
   });
 
   describe('findOne', () => {
