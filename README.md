@@ -197,6 +197,24 @@ Example snapshot from `docker scout cves` (numbers change when you rebuild, upda
 
 ## Testing
 
+### Unit tests (Vitest)
+
+Unit tests live next to the code under `src/**/__tests__/*.unit.spec.ts` and run
+in isolation — Prisma and other I/O is mocked, no network or DB is required.
+
+| Command | Scope |
+|---|---|
+| `npm run test` | runs the full unit-test suite via Vitest |
+| `npm run test:unit` | alias of `npm run test` (unit tests only) |
+| `npm run test:coverage` | runs all unit tests with v8 coverage and enforces the configured thresholds (lines ≥ 90%, branches ≥ 85%, statements ≥ 90%, functions ≥ 85%); exits non-zero if any threshold is missed |
+| `npm run test:watch` | watch mode for local development |
+
+Coverage thresholds are configured in `vitest.config.ts`.
+
+### Integration / e2e tests (Jest)
+
+End-to-end tests live in `test/` and require a running API + PostgreSQL.
+
 1. Start the API in one terminal (the Docker setup runs `prisma migrate deploy`
    on boot, so the DB is ready automatically):
 
@@ -215,7 +233,7 @@ Example snapshot from `docker scout cves` (numbers change when you rebuild, upda
 
    | Command | Scope |
    |---|---|
-   | `npm run test` | base end-to-end suite (CRUD, pagination, sorting) |
+   | `npm run test:e2e` | base end-to-end suite (CRUD, pagination, sorting) |
    | `npm run test:auth` | base suite + auth-required checks (all protected routes reject without token) |
    | `npm run test:refresh` | refresh-token flow (issue, expire, invalidate) |
    | `npm run test:rbac` | RBAC policy per role (viewer / editor / admin) |
@@ -230,8 +248,13 @@ Example snapshot from `docker scout cves` (numbers change when you rebuild, upda
 - `src/user/`, `src/category/`, `src/article/`, `src/comment/` — feature modules (controller / service / DTOs).
 - `src/common/decorators/` — `@Public()` to opt out of auth, `@Roles(...)` to require roles.
 - `src/common/guards/` — `JwtAuthGuard`, `RolesGuard`, `ApiKeyGuard`.
+- `src/common/pipes/` — custom validation pipes (e.g. `ParseUuidPipe`).
+- `src/common/interceptors/` — response interceptors (e.g. `StripPasswordInterceptor`).
+- `src/common/filters/` — exception filters (`AllExceptionsFilter`).
 - `src/common/` — shared middleware, list-query DTOs, `applyListQuery` helper.
+- `src/**/__tests__/*.unit.spec.ts` — Vitest unit tests (services, guards, pipes, DTOs, interceptor, filter).
 - `prisma/` — Prisma schema, migrations, optional seed script.
 - `test/` — Jest e2e specs (`rootDir` in `jest.config.json`); `test/auth`, `test/refresh`, `test/rbac` cover the auth stage.
+- `vitest.config.ts` — unit-test runner configuration with coverage thresholds.
 
 ---
