@@ -15,7 +15,9 @@ COPY --from=build /app/dist ./dist
 COPY --from=build /app/prisma ./prisma
 RUN rm -rf \
       node_modules/@types
-RUN addgroup -S appgroup && adduser -S appuser -G appgroup
+RUN addgroup -S appgroup && adduser -S appuser -G appgroup \
+    && mkdir -p /app/logs \
+    && chown -R appuser:appgroup /app/logs
 USER appuser
 EXPOSE 4000
 CMD ["sh", "-c", "npx prisma migrate deploy && node dist/src/main.js"]

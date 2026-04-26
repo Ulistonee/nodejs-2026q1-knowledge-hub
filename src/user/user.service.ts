@@ -1,11 +1,11 @@
-import {
-  BadRequestException,
-  ForbiddenException,
-  Injectable,
-  NotFoundException,
-} from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import * as bcrypt from 'bcrypt';
 import { ListQueryDto } from '../common/dto/list-query.dto';
+import {
+  ForbiddenError,
+  NotFoundError,
+  ValidationError,
+} from '../common/errors/app-errors';
 import { PaginatedResult } from '../common/interfaces/paginated-result.interface';
 import { applyListQuery } from '../common/utils/apply-list-query';
 import { PrismaService } from '../prisma/prisma.service';
@@ -64,7 +64,7 @@ export class UserService {
   async findOne(id: string): Promise<PublicUser> {
     const row = await this.prisma.user.findUnique({ where: { id } });
     if (!row) {
-      throw new NotFoundException();
+      throw new NotFoundError(`User ${id} not found`);
     }
     return this.toPublic(this.toUser(row));
   }
@@ -74,7 +74,7 @@ export class UserService {
       where: { login: userDto.login },
     });
     if (existing) {
-      throw new BadRequestException('Login is already taken');
+      throw new ValidationError('Login is already taken');
     }
 
     const hashedPassword = await bcrypt.hash(userDto.password, 10);
@@ -94,12 +94,12 @@ export class UserService {
       dto.oldPassword !== undefined ||
       dto.newPassword !== undefined;
     if (!hasFields) {
-      throw new BadRequestException('No fields to update');
+      throw new ValidationError('No fields to update');
     }
 
     const row = await this.prisma.user.findUnique({ where: { id } });
     if (!row) {
-      throw new NotFoundException();
+      throw new NotFoundError(`User ${id} not found`);
     }
 
     const data: Record<string, unknown> = {};
@@ -111,7 +111,7 @@ export class UserService {
     if (dto.oldPassword !== undefined && dto.newPassword !== undefined) {
       const isMatch = await bcrypt.compare(dto.oldPassword, row.password);
       if (!isMatch) {
-        throw new ForbiddenException();
+        throw new ForbiddenError('Old password does not match');
       }
       data.password = await bcrypt.hash(dto.newPassword, 10);
       data.version = { increment: 1 };
@@ -127,7 +127,7 @@ export class UserService {
   async remove(id: string): Promise<void> {
     const user = await this.prisma.user.findUnique({ where: { id } });
     if (!user) {
-      throw new NotFoundException();
+      throw new NotFoundError(`User ${id} not found`);
     }
     await this.prisma.$transaction([
       this.prisma.article.updateMany({

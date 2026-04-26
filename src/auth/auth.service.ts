@@ -1,10 +1,10 @@
-import {
-  BadRequestException,
-  ForbiddenException,
-  Injectable,
-  UnauthorizedException,
-} from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
+import {
+  ForbiddenError,
+  UnauthorizedError,
+  ValidationError,
+} from '../common/errors/app-errors';
 import { PrismaService } from '../prisma/prisma.service';
 import { SignupDto } from './dto/signup.dto';
 import * as bcrypt from 'bcrypt';
@@ -42,7 +42,7 @@ export class AuthService {
       where: { login: signupDto.login },
     });
     if (existing) {
-      throw new BadRequestException('Login is already taken');
+      throw new ValidationError('Login is already taken');
     }
 
     const adminCount = await this.prisma.user.count({
@@ -66,7 +66,7 @@ export class AuthService {
       where: { login: loginDto.login },
     });
     if (!user) {
-      throw new ForbiddenException('Invalid login or password');
+      throw new ForbiddenError('Invalid login or password');
     }
 
     const isPasswordValid = await bcrypt.compare(
@@ -74,7 +74,7 @@ export class AuthService {
       user.password,
     );
     if (!isPasswordValid) {
-      throw new ForbiddenException('Invalid login or password');
+      throw new ForbiddenError('Invalid login or password');
     }
 
     return this.generateTokens({
@@ -86,14 +86,14 @@ export class AuthService {
 
   async refresh(refreshDto: RefreshDto) {
     if (!refreshDto.refreshToken || typeof refreshDto.refreshToken !== 'string') {
-      throw new UnauthorizedException('No refresh token provided');
+      throw new UnauthorizedError('No refresh token provided');
     }
 
     const revoked = await this.prisma.revokedToken.findUnique({
       where: { token: refreshDto.refreshToken },
     });
     if (revoked) {
-      throw new ForbiddenException('Invalid or expired refresh token');
+      throw new ForbiddenError('Invalid or expired refresh token');
     }
 
     try {
@@ -107,7 +107,7 @@ export class AuthService {
         role: decoded.role,
       });
     } catch {
-      throw new ForbiddenException('Invalid or expired refresh token');
+      throw new ForbiddenError('Invalid or expired refresh token');
     }
   }
 

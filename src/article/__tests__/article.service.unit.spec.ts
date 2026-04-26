@@ -1,11 +1,11 @@
-import {
-  BadRequestException,
-  ForbiddenException,
-  NotFoundException,
-} from '@nestjs/common';
 import { Test } from '@nestjs/testing';
 import { ArticleStatus as PrismaArticleStatus } from '@prisma/client';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import {
+  ForbiddenError,
+  NotFoundError,
+  ValidationError,
+} from '../../common/errors/app-errors';
 import { PrismaService } from '../../prisma/prisma.service';
 import { ArticleService } from '../article.service';
 import { CreateArticleDto } from '../dto/create-article.dto';
@@ -87,10 +87,10 @@ describe('ArticleService (unit)', () => {
       );
     });
 
-    it('throws BadRequestException for invalid sortBy', async () => {
+    it('throws ValidationError for invalid sortBy', async () => {
       await expect(
         service.findAll({ sortBy: 'unknownField' }),
-      ).rejects.toBeInstanceOf(BadRequestException);
+      ).rejects.toBeInstanceOf(ValidationError);
     });
 
     it('skips orderBy when sortBy is empty string', async () => {
@@ -146,11 +146,9 @@ describe('ArticleService (unit)', () => {
   });
 
   describe('findOne', () => {
-    it('throws NotFoundException when not found', async () => {
+    it('throws NotFoundError when not found', async () => {
       prisma.article.findUnique.mockResolvedValue(null);
-      await expect(service.findOne('id')).rejects.toBeInstanceOf(
-        NotFoundException,
-      );
+      await expect(service.findOne('id')).rejects.toBeInstanceOf(NotFoundError);
     });
 
     it('maps the row to API representation', async () => {
@@ -228,11 +226,11 @@ describe('ArticleService (unit)', () => {
   describe('update', () => {
     const id = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa';
 
-    it('throws NotFoundException for missing article', async () => {
+    it('throws NotFoundError for missing article', async () => {
       prisma.article.findUnique.mockResolvedValue(null);
       await expect(
         service.update(id, { title: 'x' }),
-      ).rejects.toBeInstanceOf(NotFoundException);
+      ).rejects.toBeInstanceOf(NotFoundError);
     });
 
     it('blocks editor from updating articles they do not own', async () => {
@@ -246,7 +244,7 @@ describe('ArticleService (unit)', () => {
           { title: 'x' },
           { userId: 'me', role: 'editor' },
         ),
-      ).rejects.toBeInstanceOf(ForbiddenException);
+      ).rejects.toBeInstanceOf(ForbiddenError);
     });
 
     it('allows editor to update their own articles', async () => {
@@ -344,11 +342,9 @@ describe('ArticleService (unit)', () => {
   });
 
   describe('remove', () => {
-    it('throws NotFoundException when nothing was deleted', async () => {
+    it('throws NotFoundError when nothing was deleted', async () => {
       prisma.article.deleteMany.mockResolvedValue({ count: 0 });
-      await expect(service.remove('id')).rejects.toBeInstanceOf(
-        NotFoundException,
-      );
+      await expect(service.remove('id')).rejects.toBeInstanceOf(NotFoundError);
     });
 
     it('resolves when delete count > 0', async () => {

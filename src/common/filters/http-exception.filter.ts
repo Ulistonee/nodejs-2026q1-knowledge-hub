@@ -7,13 +7,21 @@ import {
   Logger,
 } from '@nestjs/common';
 import { Request, Response } from 'express';
+import { AppError } from '../errors/app-errors';
+import { redactString } from '../logger/redact';
 
 interface ErrorResponseBody {
   statusCode: number;
-  message: string;
   error: string;
+  message: string;
   path: string;
   timestamp: string;
+}
+
+interface MappedError {
+  status: number;
+  error: string;
+  message: string;
 }
 
 @Catch()
@@ -25,16 +33,36 @@ export class AllExceptionsFilter implements ExceptionFilter {
     const response = ctx.getResponse<Response>();
     const request = ctx.getRequest<Request>();
 
-    const status =
-      exception instanceof HttpException
-        ? exception.getStatus()
-        : HttpStatus.INTERNAL_SERVER_ERROR;
+    const mapped = this.map(exception);
 
-    let message = 'Internal server error';
-    let error = 'InternalServerError';
+    const body: ErrorResponseBody = {
+      statusCode: mapped.status,
+      error: mapped.error,
+      message: mapped.message,
+      path: request?.url ?? '',
+      timestamp: new Date().toISOString(),
+    };
+
+    this.logException(exception, request, body);
+
+    response.status(mapped.status).json(body);
+  }
+
+  private map(exception: unknown): MappedError {
+    if (exception instanceof AppError) {
+      return {
+        status: exception.statusCode,
+        error: exception.errorCode,
+        message: exception.message,
+      };
+    }
 
     if (exception instanceof HttpException) {
+      const status = exception.getStatus();
       const res = exception.getResponse();
+      let message = exception.message;
+      let error = exception.name;
+
       if (typeof res === 'string') {
         message = res;
       } else if (res && typeof res === 'object') {
@@ -48,28 +76,44 @@ export class AllExceptionsFilter implements ExceptionFilter {
           error = obj.error;
         }
       }
-      if (error === 'InternalServerError') {
-        error = exception.name;
-      }
-    } else if (exception instanceof Error) {
-      message = exception.message;
-      error = exception.name;
+
+      return { status, error, message };
     }
 
-    const body: ErrorResponseBody = {
-      statusCode: status,
-      message,
-      error,
-      path: request?.url ?? '',
-      timestamp: new Date().toISOString(),
+    if (exception instanceof Error) {
+      return {
+        status: HttpStatus.INTERNAL_SERVER_ERROR,
+        error: exception.name || 'Error',
+        message: exception.message || 'An unexpected error occurred',
+      };
+    }
+
+    return {
+      status: HttpStatus.INTERNAL_SERVER_ERROR,
+      error: 'InternalServerError',
+      message: 'Internal server error',
     };
+  }
 
-    if (status >= 500) {
-      this.logger.error(
-        `${request?.method ?? ''} ${body.path} -> ${status} ${message}`,
-      );
+  private logException(
+    exception: unknown,
+    request: Request | undefined,
+    body: ErrorResponseBody,
+  ): void {
+    const method = request?.method ?? '';
+    const path = body.path;
+    const summary = `${method} ${path} -> ${body.statusCode} ${body.message}`;
+    const trace =
+      exception instanceof Error && exception.stack
+        ? redactString(exception.stack)
+        : undefined;
+
+    if (body.statusCode >= 500) {
+      this.logger.error(summary, trace);
+    } else if (body.statusCode >= 400) {
+      this.logger.warn(summary);
+    } else {
+      this.logger.debug?.(summary);
     }
-
-    response.status(status).json(body);
   }
 }

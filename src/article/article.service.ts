@@ -1,11 +1,11 @@
-import {
-  BadRequestException,
-  ForbiddenException,
-  Injectable,
-  NotFoundException,
-} from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { ArticleStatus as PrismaArticleStatus, Prisma } from '@prisma/client';
 import { ArticleListQueryDto } from '../common/dto/article-list-query.dto';
+import {
+  ForbiddenError,
+  NotFoundError,
+  ValidationError,
+} from '../common/errors/app-errors';
 import { PaginatedResult } from '../common/interfaces/paginated-result.interface';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateArticleDto } from './dto/create-article.dto';
@@ -66,7 +66,7 @@ export class ArticleService {
     }
     const key = dto.sortBy as keyof Article;
     if (!ARTICLE_SORT_FIELDS.includes(key)) {
-      throw new BadRequestException(`Invalid sortBy: ${dto.sortBy}`);
+      throw new ValidationError(`Invalid sortBy: ${dto.sortBy}`);
     }
     const order = dto.order === 'desc' ? 'desc' : 'asc';
     return { [dto.sortBy]: order } as Prisma.ArticleOrderByWithRelationInput;
@@ -129,7 +129,7 @@ export class ArticleService {
       include: { tags: true },
     });
     if (!row) {
-      throw new NotFoundException();
+      throw new NotFoundError(`Article ${id} not found`);
     }
     return this.mapArticle(row);
   }
@@ -164,14 +164,14 @@ export class ArticleService {
   ): Promise<Article> {
     const existing = await this.prisma.article.findUnique({ where: { id } });
     if (!existing) {
-      throw new NotFoundException();
+      throw new NotFoundError(`Article ${id} not found`);
     }
 
     if (
       currentUser?.role === 'editor' &&
       existing.authorId !== currentUser.userId
     ) {
-      throw new ForbiddenException('Editors can only update their own articles');
+      throw new ForbiddenError('Editors can only update their own articles');
     }
 
     const data: Prisma.ArticleUncheckedUpdateInput = {};
@@ -216,7 +216,7 @@ export class ArticleService {
   async remove(id: string): Promise<void> {
     const result = await this.prisma.article.deleteMany({ where: { id } });
     if (result.count === 0) {
-      throw new NotFoundException();
+      throw new NotFoundError(`Article ${id} not found`);
     }
   }
 }

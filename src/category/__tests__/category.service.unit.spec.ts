@@ -1,6 +1,6 @@
-import { NotFoundException } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { NotFoundError } from '../../common/errors/app-errors';
 import { PrismaService } from '../../prisma/prisma.service';
 import { CategoryService } from '../category.service';
 
@@ -47,10 +47,10 @@ describe('CategoryService (unit)', () => {
     expect(result).toHaveLength(1);
   });
 
-  it('findOne throws NotFoundException for missing category', async () => {
+  it('findOne throws NotFoundError for missing category', async () => {
     prisma.category.findUnique.mockResolvedValue(null);
     await expect(service.findOne('id')).rejects.toBeInstanceOf(
-      NotFoundException,
+      NotFoundError,
     );
   });
 
@@ -68,11 +68,11 @@ describe('CategoryService (unit)', () => {
     });
   });
 
-  it('update throws NotFoundException when category is missing', async () => {
+  it('update throws NotFoundError when category is missing', async () => {
     prisma.category.findUnique.mockResolvedValue(null);
     await expect(
       service.update('id', { name: 'x' }),
-    ).rejects.toBeInstanceOf(NotFoundException);
+    ).rejects.toBeInstanceOf(NotFoundError);
   });
 
   it('update only sends defined fields', async () => {
@@ -95,10 +95,10 @@ describe('CategoryService (unit)', () => {
     });
   });
 
-  it('remove throws NotFoundException when count is 0', async () => {
+  it('remove throws NotFoundError when count is 0', async () => {
     prisma.category.deleteMany.mockResolvedValue({ count: 0 });
     await expect(service.remove('id')).rejects.toBeInstanceOf(
-      NotFoundException,
+      NotFoundError,
     );
   });
 

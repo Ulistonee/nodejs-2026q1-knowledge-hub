@@ -1,9 +1,6 @@
-import {
-  NotFoundException,
-  UnprocessableEntityException,
-} from '@nestjs/common';
 import { Test } from '@nestjs/testing';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { NotFoundError, ValidationError } from '../../common/errors/app-errors';
 import { PrismaService } from '../../prisma/prisma.service';
 import { CommentService } from '../comment.service';
 
@@ -65,11 +62,9 @@ describe('CommentService (unit)', () => {
     expect(typeof list[0].createdAt).toBe('number');
   });
 
-  it('findOne throws NotFoundException when missing', async () => {
+  it('findOne throws NotFoundError when missing', async () => {
     prisma.comment.findUnique.mockResolvedValue(null);
-    await expect(service.findOne('id')).rejects.toBeInstanceOf(
-      NotFoundException,
-    );
+    await expect(service.findOne('id')).rejects.toBeInstanceOf(NotFoundError);
   });
 
   it('findOne returns mapped comment', async () => {
@@ -78,14 +73,14 @@ describe('CommentService (unit)', () => {
     expect(out.content).toBe('Nice!');
   });
 
-  it('create throws UnprocessableEntityException for missing article', async () => {
+  it('create throws ValidationError for missing article', async () => {
     prisma.article.findUnique.mockResolvedValue(null);
     await expect(
       service.create({
         content: 'hi',
         articleId: 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
       }),
-    ).rejects.toBeInstanceOf(UnprocessableEntityException);
+    ).rejects.toBeInstanceOf(ValidationError);
   });
 
   it('create stores comment with null authorId by default', async () => {
@@ -121,11 +116,9 @@ describe('CommentService (unit)', () => {
     );
   });
 
-  it('remove throws NotFoundException for missing comment', async () => {
+  it('remove throws NotFoundError for missing comment', async () => {
     prisma.comment.deleteMany.mockResolvedValue({ count: 0 });
-    await expect(service.remove('id')).rejects.toBeInstanceOf(
-      NotFoundException,
-    );
+    await expect(service.remove('id')).rejects.toBeInstanceOf(NotFoundError);
   });
 
   it('remove resolves when one row deleted', async () => {

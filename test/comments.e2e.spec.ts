@@ -240,7 +240,7 @@ describe('Comments (e2e)', () => {
       ).toBe(true);
     });
 
-    it('should respond with UNPROCESSABLE_ENTITY if articleId does not exist', async () => {
+    it('should respond with BAD_REQUEST if articleId does not exist', async () => {
       const response = await unauthorizedRequest
         .post(commentsRoutes.create)
         .set(commonHeaders)
@@ -250,7 +250,7 @@ describe('Comments (e2e)', () => {
           authorId: null,
         });
 
-      expect(response.status).toBe(StatusCodes.UNPROCESSABLE_ENTITY);
+      expect(response.status).toBe(StatusCodes.BAD_REQUEST);
     });
 
     it('should respond with BAD_REQUEST if articleId is invalid UUID', async () => {

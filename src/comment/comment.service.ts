@@ -1,9 +1,6 @@
-import {
-  Injectable,
-  NotFoundException,
-  UnprocessableEntityException,
-} from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { CommentListQueryDto } from '../common/dto/comment-list-query.dto';
+import { NotFoundError, ValidationError } from '../common/errors/app-errors';
 import { PaginatedResult } from '../common/interfaces/paginated-result.interface';
 import { applyListQuery } from '../common/utils/apply-list-query';
 import { PrismaService } from '../prisma/prisma.service';
@@ -52,7 +49,7 @@ export class CommentService {
   async findOne(id: string): Promise<Comment> {
     const row = await this.prisma.comment.findUnique({ where: { id } });
     if (!row) {
-      throw new NotFoundException();
+      throw new NotFoundError(`Comment ${id} not found`);
     }
     return this.mapComment(row);
   }
@@ -62,7 +59,9 @@ export class CommentService {
       where: { id: dto.articleId },
     });
     if (!article) {
-      throw new UnprocessableEntityException();
+      throw new ValidationError(
+        `Cannot create comment for unknown article ${dto.articleId}`,
+      );
     }
     const row = await this.prisma.comment.create({
       data: {
@@ -77,7 +76,7 @@ export class CommentService {
   async remove(id: string): Promise<void> {
     const result = await this.prisma.comment.deleteMany({ where: { id } });
     if (result.count === 0) {
-      throw new NotFoundException();
+      throw new NotFoundError(`Comment ${id} not found`);
     }
   }
 }
