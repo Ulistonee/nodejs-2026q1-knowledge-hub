@@ -6,6 +6,9 @@ import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
 import { AppModule } from './app.module';
 import { AppLogger } from './common/logger';
 
+/** Time before `process.exit(1)` so async cleanup can finish. */
+const SHUTDOWN_EXIT_DELAY_MS = 100;
+
 async function bootstrap(): Promise<void> {
   const app = await NestFactory.create<NestExpressApplication>(AppModule, {
     bufferLogs: true,
@@ -70,7 +73,7 @@ function registerProcessErrorHandlers(
         'Process',
       );
     }
-    setTimeout(() => process.exit(1), 100).unref();
+    setTimeout(() => process.exit(1), SHUTDOWN_EXIT_DELAY_MS).unref();
   };
 
   process.on('uncaughtException', (error) => {

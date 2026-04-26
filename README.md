@@ -21,6 +21,11 @@
 
 4. Edit `.env` if needed
 
+### Logging (optional tuning)
+
+`LOG_LEVEL` (default `log`) caps how chatty the Nest logger is. In production, set
+`NODE_ENV=production` for JSON logs to stdout and to `LOG_DIR`/`app.log`. `LOG_MAX_FILE_SIZE` is
+the log file size limit in **kilobytes** before rotation (default `1024`).
 
 ### Build and run locally with Docker Compose
 

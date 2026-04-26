@@ -10,10 +10,14 @@ const SENSITIVE_KEYS = new Set([
   'token',
   'accesstoken',
   'refreshtoken',
+  'access_token',
+  'refresh_token',
   'authorization',
   'apikey',
   'api_key',
   'secret',
+  'cookie',
+  'set-cookie',
 ]);
 
 const REDACTED = '[REDACTED]';
