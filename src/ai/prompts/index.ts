@@ -11,4 +11,7 @@ export {
   type AnalyzeTask,
   buildAnalyzeArticlePrompt,
 } from './analyze-article.prompt';
-export { buildFreeformGeneratePrompt } from './generate.prompt';
+export {
+  buildFreeformGeneratePrompt,
+  buildFreeformSystemInstruction,
+} from './generate.prompt';

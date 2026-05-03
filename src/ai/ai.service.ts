@@ -3,17 +3,19 @@ import { performance } from 'node:perf_hooks';
 import { ArticleService } from '../article/article.service';
 import { AiCacheService } from './ai-cache.service';
 import { AiUsageService } from './ai-usage.service';
+import { AiConversationService } from './ai-conversation.service';
 import { AnalyzeArticleDto } from './dto/analyze-article.dto';
 import { GenerateAiDto } from './dto/generate-ai.dto';
 import { SummarizeArticleDto } from './dto/summarize-article.dto';
 import { TranslateArticleDto } from './dto/translate-article.dto';
 import { GeminiService } from './gemini.service';
 import type { AnalyzeArticleResponse } from './interfaces/analyze-article-response';
+import type { GenerateAiResponse } from './interfaces/generate-ai-response';
 import type { SummarizeArticleResponse } from './interfaces/summarize-article-response';
 import type { TranslateArticleResponse } from './interfaces/translate-article-response';
 import {
   buildAnalyzeArticlePrompt,
-  buildFreeformGeneratePrompt,
+  buildFreeformSystemInstruction,
   buildSummarizeArticlePrompt,
   buildTranslateArticlePrompt,
 } from './prompts';
@@ -36,6 +38,7 @@ export class AiService {
     private readonly geminiService: GeminiService,
     private readonly cache: AiCacheService,
     private readonly usage: AiUsageService,
+    private readonly conversation: AiConversationService,
   ) {}
 
   getDiagnostics(): {
@@ -55,6 +58,18 @@ export class AiService {
     const t0 = performance.now();
     try {
       return await this.geminiService.generateContent(input);
+    } finally {
+      this.usage.recordGeminiLatency(performance.now() - t0);
+    }
+  }
+
+  private async invokeGeminiMultiTurn(input: {
+    systemInstruction?: string;
+    contents: Array<{ role: 'user' | 'model'; text: string }>;
+  }): Promise<GeminiGenerateResult> {
+    const t0 = performance.now();
+    try {
+      return await this.geminiService.generateContentMultiTurn(input);
     } finally {
       this.usage.recordGeminiLatency(performance.now() - t0);
     }
@@ -187,15 +202,21 @@ export class AiService {
     };
   }
 
-  async generateFreeform(dto: GenerateAiDto): Promise<{ text: string }> {
-    const { systemInstruction, userText } = buildFreeformGeneratePrompt(
-      dto.prompt,
-    );
-    const { text, usage } = await this.invokeGemini({
-      systemInstruction,
-      userText,
+  async generateFreeform(dto: GenerateAiDto): Promise<GenerateAiResponse> {
+    const { sessionId, messages } = this.conversation.beginTurn(dto.sessionId);
+
+    messages.push({ role: 'user', text: dto.prompt });
+    this.conversation.normalizeAfterUserMessage(sessionId);
+
+    const { text, usage } = await this.invokeGeminiMultiTurn({
+      systemInstruction: buildFreeformSystemInstruction(),
+      contents: messages.map((m) => ({ role: m.role, text: m.text })),
     });
+
+    const reply = text.trim();
+    this.conversation.appendModelReply(sessionId, reply);
     this.usage.record(USAGE_GENERATE, usage);
-    return { text: text.trim() };
+
+    return { text: reply, sessionId };
   }
 }

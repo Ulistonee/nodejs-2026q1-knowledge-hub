@@ -106,6 +106,8 @@ Default model is set by `**GEMINI_MODEL`** (see `.env.example`), typically `**ge
   - `**GEMINI_MODEL**` — model id for `:generateContent`
   - `**AI_RATE_LIMIT_RPM**` — max AI HTTP requests per minute **per client IP** on `/ai/*` (default `20`); when exceeded the API returns **429** with `**Retry-After`** (seconds).
   - `**AI_CACHE_TTL_SEC**` — in-memory TTL for **summarize** and **translate** responses (default `300`); cache keys include `articleId`, request parameters, and article `**updatedAt`** so edits invalidate cached output.
+  - `**AI_CONVERSATION_TTL_SEC**` — idle timeout for `/ai/generate` chat sessions in seconds (default `1800`).
+  - `**AI_CONVERSATION_MAX_MESSAGES**` — max stored user+assistant turns in memory per session (default `24`).
 
 ### Run and try AI endpoints
 
@@ -124,8 +126,10 @@ Obtain a JWT (e.g. signup/login via `/auth`). Then call:
 | `POST` | `/ai/articles/:articleId/summarize` | `{ "maxLength": "short" | "medium" | "detailed" }` (all optional; default `medium`)                      |
 | `POST` | `/ai/articles/:articleId/translate` | `{ "targetLanguage": "French", "sourceLanguage": "en" }` (`targetLanguage` required)                     |
 | `POST` | `/ai/articles/:articleId/analyze`   | `{ "task": "review" | "bugs" | "optimize" | "explain" }` (optional; default `review`)                    |
-| `POST` | `/ai/generate`                      | `{ "prompt": "Your question…" }`                                                                         |
+| `POST` | `/ai/generate`                      | `{ "prompt": "…", "sessionId": "<uuid optional>" }` — omit `sessionId` to start a new chat; echo `sessionId` from the response on the next call |
 
+
+Conversation memory for `/ai/generate` is **in-memory** only: idle sessions expire after **`AI_CONVERSATION_TTL_SEC`** (default 1800s); history keeps at most **`AI_CONVERSATION_MAX_MESSAGES`** messages (user + assistant).
 
 Example (replace `TOKEN` and article UUID):
 

@@ -40,6 +40,16 @@ export class GeminiService {
     systemInstruction?: string;
     userText: string;
   }): Promise<GeminiGenerateResult> {
+    return this.generateContentMultiTurn({
+      systemInstruction: input.systemInstruction,
+      contents: [{ role: 'user', text: input.userText }],
+    });
+  }
+
+  async generateContentMultiTurn(input: {
+    systemInstruction?: string;
+    contents: Array<{ role: 'user' | 'model'; text: string }>;
+  }): Promise<GeminiGenerateResult> {
     if (!this.config.apiKey) {
       throw new HttpException(
         'Gemini API is not configured',
@@ -47,21 +57,36 @@ export class GeminiService {
       );
     }
 
+    const body = this.buildRequestBody(
+      input.systemInstruction,
+      input.contents,
+    );
+    return this.executeGenerate(body);
+  }
+
+  private buildRequestBody(
+    systemInstruction: string | undefined,
+    contents: Array<{ role: 'user' | 'model'; text: string }>,
+  ): Record<string, unknown> {
     const body: Record<string, unknown> = {
-      contents: [
-        {
-          role: 'user',
-          parts: [{ text: input.userText }],
-        },
-      ],
+      contents: contents.map((c) => ({
+        role: c.role,
+        parts: [{ text: c.text }],
+      })),
     };
 
-    if (input.systemInstruction) {
+    if (systemInstruction) {
       body.systemInstruction = {
-        parts: [{ text: input.systemInstruction }],
+        parts: [{ text: systemInstruction }],
       };
     }
 
+    return body;
+  }
+
+  private async executeGenerate(
+    body: Record<string, unknown>,
+  ): Promise<GeminiGenerateResult> {
     const payload = JSON.stringify(body);
     for (let attempt = 0; attempt <= MAX_UPSTREAM_RETRIES; attempt++) {
       let response: Response;

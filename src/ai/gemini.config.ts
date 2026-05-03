@@ -5,6 +5,8 @@ export interface GeminiConfig {
   requestTimeoutMs: number;
   aiCacheTtlSec: number;
   aiRateLimitRpm: number;
+  aiConversationTtlSec: number;
+  aiConversationMaxMessages: number;
 }
 
 const DEFAULT_BASE_URL = 'https://generativelanguage.googleapis.com';
@@ -19,5 +21,13 @@ export function loadGeminiConfig(): GeminiConfig {
     requestTimeoutMs: DEFAULT_TIMEOUT_MS,
     aiCacheTtlSec: Math.max(0, Number(process.env.AI_CACHE_TTL_SEC ?? 300)),
     aiRateLimitRpm: Math.max(1, Number(process.env.AI_RATE_LIMIT_RPM ?? 20)),
+    aiConversationTtlSec: Math.max(
+      60,
+      Number(process.env.AI_CONVERSATION_TTL_SEC ?? 1800),
+    ),
+    aiConversationMaxMessages: Math.max(
+      2,
+      Number(process.env.AI_CONVERSATION_MAX_MESSAGES ?? 24),
+    ),
   };
 }
