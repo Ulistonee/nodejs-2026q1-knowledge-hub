@@ -6,11 +6,8 @@ export interface AiUsageSnapshot {
   totalPromptTokens: number;
   totalCandidatesTokens: number;
   totalTokenCount: number;
-  /** Calls that invoked Gemini `generateContent` (measured latency below). */
   geminiCalls: number;
-  /** Sum of Gemini HTTP round-trip times (ms). */
   totalGeminiLatencyMs: number;
-  /** Average Gemini latency when `geminiCalls > 0`. */
   averageGeminiLatencyMs: number | null;
 }
 

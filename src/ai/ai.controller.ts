@@ -22,7 +22,6 @@ import { AiRateLimitGuard } from './guards/ai-rate-limit.guard';
 export class AiController {
   constructor(private readonly aiService: AiService) {}
 
-  /** Totals, per-endpoint counts, token sums, Gemini latency, summarize/translate cache hit ratio. Admin only. */
   @Get('usage')
   @Roles('admin')
   getUsage() {

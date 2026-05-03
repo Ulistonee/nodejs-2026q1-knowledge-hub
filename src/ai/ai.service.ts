@@ -18,6 +18,10 @@ import {
   buildTranslateArticlePrompt,
 } from './prompts';
 import type { GeminiGenerateResult } from './gemini.types';
+import {
+  safeParseGeminiAnalyzeOutput,
+  safeParseGeminiTranslateOutput,
+} from './schemas/gemini-structured-output.schema';
 import { parseModelJsonObject } from './utils/parse-model-json';
 
 const USAGE_SUMMARIZE = 'summarize';
@@ -34,7 +38,6 @@ export class AiService {
     private readonly usage: AiUsageService,
   ) {}
 
-  /** Snapshot for `GET /ai/usage` (admin): tokens, RPM counters, cache ratio, Gemini latency. */
   getDiagnostics(): {
     usage: ReturnType<AiUsageService['getSnapshot']>;
     cache: ReturnType<AiCacheService['getStats']>;
@@ -132,12 +135,8 @@ export class AiService {
     });
 
     const obj = parseModelJsonObject(text);
-    const translatedText =
-      typeof obj.translatedText === 'string' ? obj.translatedText.trim() : '';
-    const detectedLanguage =
-      typeof obj.detectedLanguage === 'string'
-        ? obj.detectedLanguage.trim()
-        : 'unknown';
+    const { translatedText, detectedLanguage } =
+      safeParseGeminiTranslateOutput(obj);
 
     if (!translatedText) {
       throw new HttpException(
@@ -175,24 +174,8 @@ export class AiService {
     });
 
     const obj = parseModelJsonObject(text);
-    const analysis =
-      typeof obj.analysis === 'string' ? obj.analysis.trim() : '';
-
-    let suggestions: string[] = [];
-    if (Array.isArray(obj.suggestions)) {
-      suggestions = obj.suggestions.filter(
-        (s): s is string => typeof s === 'string',
-      );
-    }
-
-    let severity: 'info' | 'warning' | 'error' = 'info';
-    if (
-      obj.severity === 'warning' ||
-      obj.severity === 'error' ||
-      obj.severity === 'info'
-    ) {
-      severity = obj.severity;
-    }
+    const { analysis, suggestions, severity } =
+      safeParseGeminiAnalyzeOutput(obj);
 
     this.usage.record(USAGE_ANALYZE, usage);
 

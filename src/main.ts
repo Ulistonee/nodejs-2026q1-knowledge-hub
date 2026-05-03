@@ -6,7 +6,6 @@ import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
 import { AppModule } from './app.module';
 import { AppLogger } from './common/logger';
 
-/** Time before `process.exit(1)` so async cleanup can finish. */
 const SHUTDOWN_EXIT_DELAY_MS = 100;
 
 async function bootstrap(): Promise<void> {

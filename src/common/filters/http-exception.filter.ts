@@ -43,6 +43,8 @@ export class AllExceptionsFilter implements ExceptionFilter {
       timestamp: new Date().toISOString(),
     };
 
+    this.applyRetryAfterHeader(exception, response);
+
     this.logException(exception, request, body);
 
     response.status(mapped.status).json(body);
@@ -93,6 +95,20 @@ export class AllExceptionsFilter implements ExceptionFilter {
       error: 'InternalServerError',
       message: 'Internal server error',
     };
+  }
+
+  private applyRetryAfterHeader(exception: unknown, response: Response): void {
+    if (!(exception instanceof HttpException)) {
+      return;
+    }
+    const res = exception.getResponse();
+    if (!res || typeof res !== 'object') {
+      return;
+    }
+    const retryAfter = (res as { retryAfter?: unknown }).retryAfter;
+    if (typeof retryAfter === 'number' && retryAfter >= 0) {
+      response.setHeader('Retry-After', String(Math.ceil(retryAfter)));
+    }
   }
 
   private logException(

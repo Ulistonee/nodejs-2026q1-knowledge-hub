@@ -36,9 +36,6 @@ export class GeminiService {
     this.config = loadGeminiConfig();
   }
 
-  /**
-   * Calls Gemini REST `generateContent`. Retries on upstream HTTP 429 up to 3 times with backoff.
-   */
   async generateContent(input: {
     systemInstruction?: string;
     userText: string;
