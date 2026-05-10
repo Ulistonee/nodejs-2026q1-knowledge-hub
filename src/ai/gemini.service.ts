@@ -1,4 +1,9 @@
-import { HttpException, HttpStatus, Injectable } from '@nestjs/common';
+import {
+  HttpException,
+  HttpStatus,
+  Injectable,
+  Logger,
+} from '@nestjs/common';
 import { loadGeminiConfig, type GeminiConfig } from './gemini.config';
 import type { GeminiGenerateResult } from './gemini.types';
 
@@ -30,6 +35,7 @@ function sleep(ms: number): Promise<void> {
 
 @Injectable()
 export class GeminiService {
+  private readonly logger = new Logger(GeminiService.name);
   private readonly config: GeminiConfig;
 
   constructor() {
@@ -52,8 +58,8 @@ export class GeminiService {
   }): Promise<GeminiGenerateResult> {
     if (!this.config.apiKey) {
       throw new HttpException(
-        'Gemini API is not configured',
-        HttpStatus.INTERNAL_SERVER_ERROR,
+        'Gemini API is not configured (set GEMINI_API_KEY and restart)',
+        HttpStatus.SERVICE_UNAVAILABLE,
       );
     }
 
@@ -98,8 +104,15 @@ export class GeminiService {
           signal: AbortSignal.timeout(this.config.requestTimeoutMs),
         });
       } catch (cause) {
+        const detail =
+          cause instanceof Error ? cause.message : String(cause);
+        this.logger.warn(`Gemini generateContent: fetch failed (${detail})`);
         throw new HttpException(
-          'AI service temporarily unavailable',
+          {
+            statusCode: HttpStatus.SERVICE_UNAVAILABLE,
+            message:
+              'Could not reach Gemini API (network timeout or DNS). Check GEMINI_API_BASE_URL and connectivity.',
+          },
           HttpStatus.SERVICE_UNAVAILABLE,
           { cause },
         );
@@ -118,6 +131,14 @@ export class GeminiService {
 
       const text = this.extractText(raw);
       if (text === '') {
+        this.logGeminiUpstreamError(
+          'generateContent',
+          response.status,
+          raw,
+        );
+        this.logger.warn(
+          'Gemini generateContent: empty text (check blockReason / candidates in response)',
+        );
         throw new HttpException(
           'AI returned an empty response',
           HttpStatus.BAD_GATEWAY,
@@ -135,8 +156,15 @@ export class GeminiService {
       return { text, usage };
     }
 
+    this.logger.warn(
+      `Gemini generateContent: exhausted retries (${MAX_UPSTREAM_RETRIES + 1} attempts); often upstream 429`,
+    );
     throw new HttpException(
-      'AI service temporarily unavailable',
+      {
+        statusCode: HttpStatus.SERVICE_UNAVAILABLE,
+        message:
+          'Gemini still returned errors after retries (often HTTP 429). Check quotas in Google AI Studio or wait and retry.',
+      },
       HttpStatus.SERVICE_UNAVAILABLE,
     );
   }
@@ -157,30 +185,62 @@ export class GeminiService {
     return parts.map((p) => p.text ?? '').join('');
   }
 
+  private logGeminiUpstreamError(
+    phase: string,
+    httpStatus: number,
+    raw: GeminiRestResponse,
+  ): void {
+    const err = raw.error;
+    const parts: string[] = [`httpStatus=${httpStatus}`];
+    if (err?.status !== undefined) {
+      parts.push(`api.status=${String(err.status)}`);
+    }
+    if (err?.code !== undefined) {
+      parts.push(`api.code=${String(err.code)}`);
+    }
+    if (err?.message) {
+      parts.push(`api.message=${err.message.slice(0, 500)}`);
+    }
+    this.logger.warn(`Gemini ${phase}: ${parts.join(' ')}`);
+  }
+
   private throwFromGeminiError(
     httpStatus: number,
     raw: GeminiRestResponse,
   ): never {
+    this.logGeminiUpstreamError('generateContent', httpStatus, raw);
     const err = raw.error;
     const upstreamMsg = err?.message ?? 'Gemini request failed';
 
     if (httpStatus === 401 || httpStatus === 403) {
       throw new HttpException(
-        'AI service configuration error',
-        HttpStatus.INTERNAL_SERVER_ERROR,
+        {
+          statusCode: HttpStatus.SERVICE_UNAVAILABLE,
+          message:
+            `Gemini rejected the request (HTTP ${httpStatus}). Verify GEMINI_API_KEY and model access.`,
+        },
+        HttpStatus.SERVICE_UNAVAILABLE,
       );
     }
 
     if (httpStatus === 429) {
       throw new HttpException(
-        'AI service temporarily unavailable',
+        {
+          statusCode: HttpStatus.SERVICE_UNAVAILABLE,
+          message:
+            'Gemini rate limit or quota exceeded (HTTP 429). Check usage in Google AI Studio, billing, or try later.',
+        },
         HttpStatus.SERVICE_UNAVAILABLE,
       );
     }
 
     if (httpStatus >= 500) {
       throw new HttpException(
-        'AI service temporarily unavailable',
+        {
+          statusCode: HttpStatus.SERVICE_UNAVAILABLE,
+          message:
+            'Gemini returned an upstream server error (5xx). Retry later; outage may be transient.',
+        },
         HttpStatus.SERVICE_UNAVAILABLE,
       );
     }

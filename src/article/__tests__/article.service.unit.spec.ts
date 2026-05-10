@@ -7,6 +7,7 @@ import {
   ValidationError,
 } from '../../common/errors/app-errors';
 import { PrismaService } from '../../prisma/prisma.service';
+import { RagVectorSyncService } from '../../rag/rag-vector-sync.service';
 import { ArticleService } from '../article.service';
 import { CreateArticleDto } from '../dto/create-article.dto';
 import { ArticleStatus } from '../enums/article-status.enum';
@@ -28,6 +29,7 @@ const buildArticleRow = (
 
 describe('ArticleService (unit)', () => {
   let service: ArticleService;
+  let ragSync: { removeArticleVectorsSafe: ReturnType<typeof vi.fn> };
   let prisma: {
     article: {
       findMany: ReturnType<typeof vi.fn>;
@@ -41,6 +43,10 @@ describe('ArticleService (unit)', () => {
   };
 
   beforeEach(async () => {
+    ragSync = {
+      removeArticleVectorsSafe: vi.fn().mockResolvedValue(undefined),
+    };
+
     prisma = {
       article: {
         findMany: vi.fn(),
@@ -57,6 +63,7 @@ describe('ArticleService (unit)', () => {
       providers: [
         ArticleService,
         { provide: PrismaService, useValue: prisma },
+        { provide: RagVectorSyncService, useValue: ragSync },
       ],
     }).compile();
 
@@ -345,11 +352,13 @@ describe('ArticleService (unit)', () => {
     it('throws NotFoundError when nothing was deleted', async () => {
       prisma.article.deleteMany.mockResolvedValue({ count: 0 });
       await expect(service.remove('id')).rejects.toBeInstanceOf(NotFoundError);
+      expect(ragSync.removeArticleVectorsSafe).not.toHaveBeenCalled();
     });
 
     it('resolves when delete count > 0', async () => {
       prisma.article.deleteMany.mockResolvedValue({ count: 1 });
       await expect(service.remove('id')).resolves.toBeUndefined();
+      expect(ragSync.removeArticleVectorsSafe).toHaveBeenCalledWith('id');
     });
   });
 });

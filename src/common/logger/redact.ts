@@ -7,6 +7,8 @@ const SENSITIVE_KEYS = new Set([
   'currentpassword',
   'passwordconfirmation',
   'confirmpassword',
+  'gemini_api_key',
+  'geminiapikey',
   'token',
   'accesstoken',
   'refreshtoken',
@@ -46,7 +48,11 @@ export function redactString(input: string): string {
   if (!input) return input;
   return input
     .replace(
-      /("(?:password|newPassword|oldPassword|currentPassword|passwordConfirmation|confirmPassword|token|accessToken|refreshToken|secret|apiKey|api_key)"\s*:\s*)"[^"]*"/gi,
+      /([?&]key=)[^&\s"']+/gi,
+      `$1${REDACTED}`,
+    )
+    .replace(
+      /("(?:password|newPassword|oldPassword|currentPassword|passwordConfirmation|confirmPassword|token|accessToken|refreshToken|secret|apiKey|api_key|geminiApiKey|GEMINI_API_KEY)"\s*:\s*)"[^"]*"/gi,
       `$1"${REDACTED}"`,
     )
     .replace(

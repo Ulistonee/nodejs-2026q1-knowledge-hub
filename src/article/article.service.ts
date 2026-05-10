@@ -8,6 +8,7 @@ import {
 } from '../common/errors/app-errors';
 import { PaginatedResult } from '../common/interfaces/paginated-result.interface';
 import { PrismaService } from '../prisma/prisma.service';
+import { RagVectorSyncService } from '../rag/rag-vector-sync.service';
 import { CreateArticleDto } from './dto/create-article.dto';
 import { UpdateArticleDto } from './dto/update-article.dto';
 import { ArticleStatus } from './enums/article-status.enum';
@@ -42,7 +43,10 @@ type ArticleWithTags = Prisma.ArticleGetPayload<{
 
 @Injectable()
 export class ArticleService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly ragVectorSync: RagVectorSyncService,
+  ) {}
 
   private mapArticle(row: ArticleWithTags): Article {
     return {
@@ -218,5 +222,7 @@ export class ArticleService {
     if (result.count === 0) {
       throw new NotFoundError(`Article ${id} not found`);
     }
+
+    await this.ragVectorSync.removeArticleVectorsSafe(id);
   }
 }
