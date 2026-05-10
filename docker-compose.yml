@@ -1,0 +1,93 @@
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - 4000:4000
+    env_file:
+      - .env
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}?schema=public&sslmode=disable
+    command:
+      - sh
+      - -ec
+      - |
+          i=1
+          until npx prisma migrate deploy; do
+            if [ "$$i" -ge 45 ]; then
+              echo "migrate: giving up after 45 attempts" >&2
+              exit 1
+            fi
+            echo "migrate: waiting for PostgreSQL ($$i/45) ..."
+            i=$$((i+1))
+            sleep 2
+          done
+          exec node dist/src/main.js
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:4000/health"]
+      interval: 10s
+      timeout: 10s
+      retries: 3
+      start_period: 15s
+    restart: on-failure
+    networks:
+      - db-network
+    depends_on:
+      db:
+        condition: service_healthy
+      vectordb:
+        condition: service_healthy
+        
+  db:
+    image: postgres:16-alpine
+    ports:
+      - 5432:5432
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    restart: unless-stopped
+    networks:
+      - db-network
+
+  adminer:
+    image: adminer
+    profiles:
+      - debug
+    ports:
+      - 8080:8080
+    networks:
+      - db-network
+
+  vectordb:
+    image: qdrant/qdrant:latest
+    ports:
+      - 6333:6333
+    healthcheck:
+      test: ["CMD-SHELL", "bash -c 'cat < /dev/null > /dev/tcp/127.0.0.1/6333'"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
+    volumes:
+      - vectordb-data:/qdrant/storage
+    restart: unless-stopped
+    networks:
+      - db-network
+
+volumes:
+  postgres-data:
+  vectordb-data:
+
+networks:
+  db-network:
+    driver: bridge

@@ -2,8 +2,14 @@
 /dist
 /node_modules
 
+# Environment (secrets)
+.env
+.env.local
+
 # Logs
 logs
+# e.g. temp paths created under the repo during local runs
+var/
 *.log
 npm-debug.log*
 pnpm-debug.log*
@@ -33,3 +39,9 @@ lerna-debug.log*
 !.vscode/tasks.json
 !.vscode/launch.json
 !.vscode/extensions.json
+/generated/prisma
+score.md
+.env
+assignment.md
+.task/*
+stages.md
